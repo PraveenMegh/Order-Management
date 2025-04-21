@@ -19,7 +19,7 @@ def send_dispatch_email():
 
     with open("data/Dispatch_Summary_Today.pdf", "rb") as f:
         part = MIMEApplication(f.read(), Name="Dispatch_Summary.pdf")
-        part['Content-Disposition'] = 'attachment; filename="Dispatch_Summary.pdf"'
+        part['Content-Disposition'] = 'attachment; filename=\"Dispatch_Summary.pdf\"'
         msg.attach(part)
 
     with smtplib.SMTP("smtp.gmail.com", 587) as server:
