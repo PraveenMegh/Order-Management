@@ -1,4 +1,6 @@
 import streamlit as st
+from utils.header import show_header
+show_header()
 from utils.auth import check_login
 from PIL import Image
 

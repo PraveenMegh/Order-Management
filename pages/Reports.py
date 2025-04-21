@@ -1,4 +1,6 @@
 import streamlit as st
+from utils.header import show_header
+show_header()
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -23,3 +25,6 @@ if uploaded_file:
     st.bar_chart(qty_group)
 else:
     st.warning("Please upload an Excel file to see demand charts.")
+
+from utils.header import show_header
+show_header()
