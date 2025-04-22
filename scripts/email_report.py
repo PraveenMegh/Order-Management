@@ -43,12 +43,13 @@ generate_pdf(report_path, data)
 # Email config
 sender = os.getenv("EMAIL_USER")
 password = os.getenv("EMAIL_PASSWORD")
-receiver = "info@shreesaisalt.com"
+receiver = "shreesaiindustries17@gmail.com"
 cc = ["praveeenmeghkrish@gmail.com", "pkc05@yahoo.com"]
 
 msg = MIMEMultipart()
 msg['From'] = sender
 msg['To'] = receiver
+msg['Cc'] = ", ".join(cc)
 msg['Subject'] = f"🧾 Daily Dispatch Summary - {datetime.now().strftime('%Y-%m-%d')}"
 
 msg.attach(MIMEText("Attached is the daily dispatch summary PDF.", "plain"))
