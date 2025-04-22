@@ -43,8 +43,8 @@ generate_pdf(report_path, data)
 # Email config
 sender = os.getenv("EMAIL_USER")
 password = os.getenv("EMAIL_PASSWORD")
-receiver = "shreesaiindustries17@gmail.com"
-cc = ["praveeenmeghkrish@gmail.com", "pkc05@yahoo.com"]
+receiver = "info@shreesaisalt.com"
+
 
 msg = MIMEMultipart()
 msg['From'] = sender
