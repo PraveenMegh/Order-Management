@@ -44,6 +44,7 @@ generate_pdf(report_path, data)
 sender = os.getenv("EMAIL_USER")
 password = os.getenv("EMAIL_PASSWORD")
 receiver = "info@shreesaisalt.com"
+cc = ["praveeenmeghkrish@gmail.com", "pkc05@yahoo.com"]
 
 msg = MIMEMultipart()
 msg['From'] = sender
@@ -61,3 +62,18 @@ with smtplib.SMTP("smtp.gmail.com", 587) as server:
     server.starttls(context=context)
     server.login(sender, password)
     server.sendmail(sender, receiver, msg.as_string())
+
+try:
+    print(f"Sending email from: {sender} to: {receiver}, CC: {cc}")
+
+    # Create secure connection and login
+    context = ssl.create_default_context()
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls(context=context)
+        server.login(sender, password)
+        server.send_message(msg)
+
+    print("✅ Email sent successfully!")
+
+except Exception as e:
+    print(f"❌ Email failed to send: {e}")
