@@ -66,16 +66,13 @@ with smtplib.SMTP("smtp.gmail.com", 587) as server:
     server.sendmail(sender, all_recipients, msg.as_string())
 
 try:
-    print(f"Sending email from: {sender} to: {receiver}, CC: {cc}")
-
-    # Create secure connection and login
-    context = ssl.create_default_context()
     with smtplib.SMTP("smtp.gmail.com", 587) as server:
-        server.starttls(context=context)
+        server.starttls()
         server.login(sender, password)
-        server.send_message(msg)
-
-    print("✅ Email sent successfully!")
-
+        server.sendmail(sender, [receiver] + cc, msg.as_string())
+    print("✅ Email sent successfully to:", [receiver] + cc)
 except Exception as e:
-    print(f"❌ Email failed to send: {e}")
+    print("❌ Email sending failed:", e)
+    exit(1)  # Tells GitHub Actions to mark as failed
+
+# End the script gracefully

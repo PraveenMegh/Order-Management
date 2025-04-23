@@ -22,7 +22,7 @@ def check_login():
                 st.session_state.username = username
                 st.session_state.role = USERS[username]["role"]
                 st.success(f"Welcome, {username} ({st.session_state.role}) 👋")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Invalid credentials")
         st.stop()  # Stop app until login

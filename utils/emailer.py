@@ -9,11 +9,13 @@ def send_dispatch_email():
     sender = "praveeenmeghkrish@gmail.com"
     receiver = "info@shreesaisalt.com"
     password = st.secrets["EMAIL_PASSWORD"]
+    
 
     msg = MIMEMultipart()
     msg['Subject'] = f"Daily Dispatch Summary - {datetime.now().strftime('%Y-%m-%d')}"
     msg['From'] = sender
     msg['To'] = receiver
+
 
     msg.attach(MIMEText("Attached is today's dispatch summary PDF."))
 
