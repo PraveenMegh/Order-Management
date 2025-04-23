@@ -2,9 +2,9 @@ import streamlit as st
 from utils.header import show_header
 from utils.auth import check_login
 
-st.set_page_config(page_title='Shree Sai Industries - Order Management', layout='wide')  # ✅ This must be first
+st.set_page_config(page_title='Shree Sai Industries - Order Management', layout='wide')
 
-# ✅ Clean UI styling for all devices
+# Mobile styling
 st.markdown("""
     <style>
         .stButton > button {
@@ -21,17 +21,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ✅ Show logo and name
 show_header()
-
-# ✅ Role-based login
 check_login()
 
-# ✅ Display logged-in user's role
 role = st.session_state.get("role", "")
 st.markdown(f"### Welcome, **{role}** Team 👋")
 
-# ✅ Role-based navigation
+# Navigation
 if role == "Sales":
     page = st.selectbox("📁 Navigate to", ["📦 Orders"])
 elif role == "Dispatch":
@@ -43,7 +39,7 @@ elif role == "Admin":
 else:
     page = None
 
-# ✅ Dynamic routing
+# Routing
 if page == "📦 Orders":
     st.switch_page("pages/Orders.py")
 elif page == "🚚 Dispatch":

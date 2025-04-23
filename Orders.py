@@ -2,15 +2,14 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from utils.header import show_header
+from utils.auth import check_login
 
-from utils.auth import check_login    # ✅ Optional: enforce login if used
+st.set_page_config(page_title="📦 Orders - Shree Sai Industries", layout="wide")
 
-st.set_page_config(page_title="Orders - Shree Sai Industries", layout="wide")  # ✅ Must be first Streamlit command
+show_header()
+check_login()
 
-show_header()  # ✅ Show logo + header text
-check_login()  # ✅ Optional: comment out if login not enforced here
-
-# Initialize session state for orders if not present
+# Initialize session state for orders
 if "orders" not in st.session_state:
     st.session_state.orders = []
 
@@ -40,7 +39,6 @@ with st.form("order_form"):
 
 # ---- Editable Table for Un-dispatched Orders ---- #
 st.subheader("📝 Edit Orders (Before Dispatch)")
-
 for order in st.session_state.orders:
     if order["status"] == "Pending":
         with st.expander(f"Order #{order['id']} - {order['product']}"):
