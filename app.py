@@ -1,16 +1,54 @@
 import streamlit as st
 from utils.header import show_header
-show_header()
 from utils.auth import check_login
-from PIL import Image
 
-st.set_page_config(page_title='Order Management', layout='wide')
+st.set_page_config(page_title='Shree Sai Industries - Order Management', layout='wide')
 
-# Branding
-st.markdown("""<div style='display:flex;align-items:center;gap:10px'>
-<img src='https://via.placeholder.com/120x40.png?text=Shree+Sai+Salt' alt='Logo'>
-<h2>Shree Sai Salt - Order Management</h2>
-</div><hr>""", unsafe_allow_html=True)
+# Optional: Clean mobile styling
+st.markdown("""
+    <style>
+        .stButton > button {
+            font-size: 18px;
+            padding: 12px 24px;
+        }
+        .stSelectbox > div {
+            font-size: 18px !important;
+        }
+        .block-container {
+            padding-top: 1rem;
+            padding-bottom: 2rem;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-check_login()  # Login check placeholder
-st.sidebar.success("Select a page to continue.")
+show_header()
+check_login()
+
+# Get role of logged-in user
+role = st.session_state.get("role", "")
+
+st.markdown(f"### Welcome, **{role}** Team 👋")
+
+# Role-based top navigation
+if role == "Sales":
+    page = st.selectbox("📁 Navigate to", ["📦 Orders"])
+elif role == "Dispatch":
+    page = st.selectbox("📁 Navigate to", ["🚚 Dispatch"])
+elif role == "Accounts":
+    page = st.selectbox("📁 Navigate to", ["📊 Reports", "📊 Demand"])
+elif role == "Admin":
+    page = st.selectbox("📁 Navigate to", ["📦 Orders", "🚚 Dispatch", "📊 Reports", "📊 Demand", "🧑‍💼 Admin"])
+else:
+    page = None
+
+# Load selected page dynamically
+if page == "📦 Orders":
+    st.switch_page("pages/Orders.py")
+elif page == "🚚 Dispatch":
+    st.switch_page("pages/Dispatch.py")
+elif page == "📊 Reports":
+    st.switch_page("pages/Reports.py")
+elif page == "📊 Demand":
+    st.switch_page("pages/Demand.py")
+elif page == "🧑‍💼 Admin":
+    st.switch_page("pages/Admin.py")
