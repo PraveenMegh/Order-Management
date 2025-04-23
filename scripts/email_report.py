@@ -40,11 +40,10 @@ report_path = Path("reports") / f"Dispatch_Summary_{datetime.now().strftime('%Y-
 report_path.parent.mkdir(exist_ok=True)
 generate_pdf(report_path, data)
 
-# Email config
 sender = os.getenv("EMAIL_USER")
 password = os.getenv("EMAIL_PASSWORD")
 receiver = "info@shreesaisalt.com"
-
+cc = ["pkc05@yahoo.com"]  # ✅ Define the cc list
 
 msg = MIMEMultipart()
 msg['From'] = sender
@@ -59,10 +58,12 @@ with open(report_path, "rb") as f:
     msg.attach(part)
 
 context = ssl.create_default_context()
+all_recipients = [receiver] + cc
+
 with smtplib.SMTP("smtp.gmail.com", 587) as server:
-    server.starttls(context=context)
+    server.starttls()
     server.login(sender, password)
-    server.sendmail(sender, receiver, msg.as_string())
+    server.sendmail(sender, all_recipients, msg.as_string())
 
 try:
     print(f"Sending email from: {sender} to: {receiver}, CC: {cc}")
