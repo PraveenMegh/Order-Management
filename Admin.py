@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.header import show_header
+from header import show_header
 from utils.auth import check_login
 
 # ✅ Page config set correctly

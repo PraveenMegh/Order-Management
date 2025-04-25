@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from utils.header import show_header
+from header import show_header
 from utils.auth import check_login
 import sqlite3  # or your database connection method
 import plotly.express as px  # recommended for nice charts

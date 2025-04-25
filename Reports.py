@@ -7,6 +7,7 @@ import os
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
+from header import show_header
 
 st.set_page_config(page_title="Demand Reports", layout="wide")
 st.title("📈 Demand Analysis Reports")
