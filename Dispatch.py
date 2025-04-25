@@ -4,11 +4,20 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from utils.header import show_header
 from utils.auth import check_login
+import io
 
 st.set_page_config(page_title="🚚 Dispatch Orders - Shree Sai Industries", layout="wide")
 
 show_header()
+st.image("./assets/logo.png", width=200)
+
 check_login()
+
+# Role-based access control
+allowed_roles = ["Admin", "Dispatch"]
+if st.session_state.get("role") not in allowed_roles:
+    st.error("🚫 You do not have permission to view this page.")
+    st.stop()
 
 st.title("🚚 Dispatch Orders")
 
@@ -46,7 +55,6 @@ if dispatched_orders:
     st.dataframe(df, use_container_width=True)
 
     # Download as Excel
-    import io
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name="Dispatch Summary")

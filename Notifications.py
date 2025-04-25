@@ -6,6 +6,7 @@ st.set_page_config(page_title="🔔 Notifications - Shree Sai Industries", layou
 
 # ✅ Display header and restrict access
 show_header()
+st.image("./assets/logo.png", width=200)  # Logo for consistency
 check_login()
 
 # ✅ Optional: restrict to Admin role

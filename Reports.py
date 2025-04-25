@@ -11,6 +11,9 @@ from reportlab.lib.utils import ImageReader
 st.set_page_config(page_title="Demand Reports", layout="wide")
 st.title("📈 Demand Analysis Reports")
 
+show_header()
+st.image("./assets/logo.png", width=200)
+
 # Load data
 conn = sqlite3.connect("data/orders.db")
 df = pd.read_sql_query("SELECT * FROM orders", conn)

@@ -7,7 +7,15 @@ from utils.auth import check_login
 st.set_page_config(page_title="📦 Orders - Shree Sai Industries", layout="wide")
 
 show_header()
+st.image("./assets/logo.png", width=200)
+
 check_login()
+
+# Role-based access control
+allowed_roles = ["Admin", "Sales"]
+if st.session_state.get("role") not in allowed_roles:
+    st.error("🚫 You do not have permission to view this page.")
+    st.stop()
 
 # Initialize session state for orders
 if "orders" not in st.session_state:
