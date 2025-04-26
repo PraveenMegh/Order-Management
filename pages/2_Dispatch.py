@@ -1,131 +1,137 @@
 import streamlit as st
-import pandas as pd
 import sqlite3
+import pandas as pd
 from datetime import datetime
 from utils.header import show_header
 from utils.auth import check_login
 
-# --- Authentication ---
 check_login()
 show_header()
 
-# --- Database Connection ---
+st.header("🚚 Dispatch Orders")
+
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)
 c = conn.cursor()
 
-# --- Role Detection ---
-role = st.session_state.get("role")
-username = st.session_state.get("username")
-
-st.title("🚚 Dispatch Management")
-
-# --- Section: Pending Orders ---
-
-st.subheader("📦 Pending Orders")
-
-if role == "Dispatch" or role == "Admin":
-    # Dispatch and Admin can see all pending
-    c.execute('''
-    SELECT id, username, customer_name, product_name, quantity, urgent, created_at
-    FROM orders
-    WHERE status = 'Pending'
-    ORDER BY urgent DESC, created_at ASC
-    ''')
-else:
-    # Salesperson sees only their own pending
-    c.execute('''
-    SELECT id, username, customer_name, product_name, quantity, urgent, created_at
-    FROM orders
-    WHERE status = 'Pending' AND username = ?
-    ORDER BY urgent DESC, created_at ASC
-    ''', (username,))
-    
+# Fetch pending orders FIFO
+c.execute('''
+SELECT * FROM orders
+WHERE status = 'Pending'
+ORDER BY created_at ASC
+''')
 pending_orders = c.fetchall()
 
-if pending_orders:
-    for order in pending_orders:
-        id, user, customer, product, qty, urgent, created_at = order
-        
-        expander_label = f"🔥 Order #{id} - {product}" if urgent else f"Order #{id} - {product}"
-        with st.expander(expander_label):
-            st.markdown(f"**Customer:** {customer}")
-            st.markdown(f"**Salesperson:** {user}")
-            st.markdown(f"**Quantity Ordered:** {qty}")
-            st.markdown(f"**Created At:** {datetime.strptime(created_at, '%Y-%m-%d %H:%M:%S.%f').strftime('%d-%b-%Y %I:%M %p')}")
-            if urgent:
-                st.markdown("**Urgent:** 🔥 Yes")
-            else:
-                st.markdown("**Urgent:** No")
+# Fetch dispatched orders
+c.execute('''
+SELECT * FROM orders
+WHERE status = 'Dispatched'
+ORDER BY dispatched_at DESC
+''')
+dispatched_orders = c.fetchall()
 
-            if role == "Dispatch" or role == "Admin":
-                dispatched_qty = st.number_input(
-                    "Enter Dispatch Quantity",
+# --- Dispatch Section ---
+
+if st.session_state.role == "Dispatch" or st.session_state.role == "Admin":
+
+    if pending_orders:
+        st.subheader("📦 Pending Orders (FIFO)")
+
+        today = datetime.now()
+
+        for order in pending_orders:
+            id, username, customer_name, product_name, quantity, urgent, status, created_at, dispatched_quantity, dispatched_at = order
+
+            created_fmt = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S.%f")
+            created_fmt_str = created_fmt.strftime("%d-%m-%Y %I:%M %p")
+
+            highlight_style = ""
+            if (today - created_fmt).days > 10:
+                highlight_style = "background-color: #FFCCCC; padding: 10px; border-radius: 5px;"  # Light red
+
+            with st.container():
+                st.markdown(
+                    f"<div style='{highlight_style}'>"
+                    f"<b>Order #{id} - {product_name}</b><br>"
+                    f"📅 <b>Created On:</b> {created_fmt_str}<br>"
+                    f"👤 <b>Customer:</b> {customer_name}<br>"
+                    f"🧑‍💼 <b>Salesperson:</b> {username}<br>"
+                    f"📦 <b>Original Quantity:</b> {quantity}<br>"
+                    f"🚩 <b>Urgent:</b> {'🔥 Yes' if urgent else 'No'}<br><br>",
+                    unsafe_allow_html=True
+                )
+
+                dispatch_qty = st.number_input(
+                    "Dispatch Quantity",
                     min_value=0,
-                    max_value=qty,
-                    value=qty,
+                    max_value=quantity,
+                    value=quantity,
                     key=f"dispatch_qty_{id}"
                 )
 
-                if st.button(f"✅ Confirm Dispatch for Order #{id}", key=f"confirm_dispatch_{id}"):
-                    dispatched_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                if st.button("Confirm Dispatch", key=f"confirm_dispatch_{id}"):
+                    now = datetime.now()
                     c.execute('''
                         UPDATE orders
                         SET status = 'Dispatched',
                             dispatched_quantity = ?,
                             dispatched_at = ?
                         WHERE id = ?
-                    ''', (dispatched_qty, dispatched_at, id))
+                    ''', (dispatch_qty, now, id))
                     conn.commit()
                     st.success(f"Order #{id} dispatched successfully!")
                     st.rerun()
-else:
-    st.info("✅ No pending orders.")
 
-# --- Section: Dispatched Orders ---
+    else:
+        st.info("✅ No pending orders for dispatch.")
+
+else:
+    st.warning("🚫 Only Dispatch or Admin can process dispatches.")
+
+# --- Dispatched Orders Section ---
 
 st.subheader("✅ Dispatched Orders")
 
-if role == "Dispatch" or role == "Admin":
-    dispatched_df = pd.read_sql_query('''
-    SELECT id, username, customer_name, product_name, quantity, dispatched_quantity, urgent, created_at, dispatched_at
-    FROM orders
-    WHERE status = 'Dispatched'
-    ORDER BY dispatched_at DESC
-    ''', conn)
+if dispatched_orders:
+    data = []
+    for order in dispatched_orders:
+        id, username, customer_name, product_name, quantity, urgent, status, created_at, dispatched_quantity, dispatched_at = order
+
+        created_fmt = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S.%f").strftime("%d-%m-%Y %I:%M %p")
+        dispatched_fmt = datetime.strptime(dispatched_at, "%Y-%m-%d %H:%M:%S.%f").strftime("%d-%m-%Y %I:%M %p")
+
+        data.append({
+            "Order ID": id,
+            "Customer": customer_name,
+            "Product": product_name,
+            "Ordered Qty": quantity,
+            "Dispatched Qty": dispatched_quantity,
+            "Urgent": "Yes" if urgent else "No",
+            "Created At": created_fmt,
+            "Dispatched At": dispatched_fmt,
+            "Salesperson": username
+        })
+
+    df = pd.DataFrame(data)
+
+    # Filter view: Sales can see only their orders
+    if st.session_state.role == "Sales":
+        df = df[df["Salesperson"] == st.session_state.username]
+
+    st.dataframe(df, use_container_width=True)
+
+    if st.session_state.role == "Admin":
+        # Admin can download Excel report
+        buffer = pd.ExcelWriter('Dispatch_Summary.xlsx', engine='xlsxwriter')
+        df.to_excel(buffer, index=False, sheet_name='Dispatch Summary')
+        buffer.close()
+
+        with open('Dispatch_Summary.xlsx', "rb") as file:
+            btn = st.download_button(
+                label="📥 Download Dispatch Report (Excel)",
+                data=file,
+                file_name=f"Dispatch_Summary_{datetime.now().date()}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
 else:
-    # Sales: only their own dispatched
-    dispatched_df = pd.read_sql_query('''
-    SELECT id, username, customer_name, product_name, quantity, dispatched_quantity, urgent, created_at, dispatched_at
-    FROM orders
-    WHERE status = 'Dispatched' AND username = ?
-    ORDER BY dispatched_at DESC
-    ''', conn, params=(username,))
-
-if not dispatched_df.empty:
-    dispatched_df['Created At'] = pd.to_datetime(dispatched_df['created_at']).dt.strftime("%d-%b-%Y %I:%M %p")
-    dispatched_df['Dispatched At'] = pd.to_datetime(dispatched_df['dispatched_at']).dt.strftime("%d-%b-%Y %I:%M %p")
-
-    display_df = dispatched_df[['id', 'username', 'customer_name', 'product_name', 'quantity', 'dispatched_quantity', 'urgent', 'Created At', 'Dispatched At']]
-    display_df.rename(columns={
-        'id': 'Order ID',
-        'username': 'Sales Person',
-        'customer_name': 'Customer',
-        'product_name': 'Product',
-        'quantity': 'Ordered Qty',
-        'dispatched_quantity': 'Dispatched Qty',
-        'urgent': 'Urgent'
-    }, inplace=True)
-
-    st.dataframe(display_df, use_container_width=True)
-
-    # Only Admin can download the report
-    if role == "Admin":
-        csv = display_df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Download Dispatch Report (CSV)",
-            data=csv,
-            file_name=f"Dispatch_Report_{datetime.now().strftime('%d-%b-%Y')}.csv",
-            mime="text/csv"
-        )
-else:
-    st.info("No dispatched orders yet.")
+    st.info("🚚 No dispatched orders yet.")
