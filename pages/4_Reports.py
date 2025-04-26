@@ -3,7 +3,6 @@ import sqlite3
 import pandas as pd
 from utils.header import show_header
 from utils.auth import check_login
-from datetime import datetime
 
 # --- Authentication ---
 check_login()
@@ -13,53 +12,51 @@ show_header()
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)
 c = conn.cursor()
 
-# --- Get logged-in user's info ---
+# --- User Info ---
 username = st.session_state.get("username")
 role = st.session_state.get("role")
 
 # --- Fetch Data ---
-if role == "Admin" or role == "Dispatch":
+if role in ["Admin", "Dispatch"]:
     pending_orders = pd.read_sql_query("SELECT * FROM orders WHERE status = 'Pending'", conn)
     dispatched_orders = pd.read_sql_query("SELECT * FROM orders WHERE status = 'Dispatched'", conn)
 else:
     pending_orders = pd.read_sql_query("SELECT * FROM orders WHERE status = 'Pending' AND username = ?", conn, params=(username,))
     dispatched_orders = pd.read_sql_query("SELECT * FROM orders WHERE status = 'Dispatched' AND username = ?", conn, params=(username,))
 
-# --- Format Date Columns ---
+# --- Format Dates ---
 if not pending_orders.empty:
-    pending_orders['created_at'] = pd.to_datetime(pending_orders['created_at'])
-    pending_orders['created_at_str'] = pending_orders['created_at'].dt.strftime('%d-%m-%Y %H:%M')
+    pending_orders['created_at'] = pd.to_datetime(pending_orders['created_at']).dt.strftime('%d-%m-%Y %I:%M %p')
 
 if not dispatched_orders.empty:
-    dispatched_orders['created_at'] = pd.to_datetime(dispatched_orders['created_at']).dt.strftime('%d-%m-%Y %H:%M')
-    dispatched_orders['dispatched_at'] = pd.to_datetime(dispatched_orders['dispatched_at']).dt.strftime('%d-%m-%Y %H:%M')
+    dispatched_orders['created_at'] = pd.to_datetime(dispatched_orders['created_at']).dt.strftime('%d-%m-%Y %I:%M %p')
+    dispatched_orders['dispatched_at'] = pd.to_datetime(dispatched_orders['dispatched_at']).dt.strftime('%d-%m-%Y %I:%M %p')
 
-# --- Reports UI ---
-st.title("📊 Orders Reports")
+# --- UI ---
+st.title("📊 Order Reports")
+st.markdown(" ")
+
+# --- Pending Orders Section ---
 
 st.subheader("📦 Pending Orders")
+st.markdown(" ")
 
 if pending_orders.empty:
     st.success("✅ No pending orders!")
 else:
-    # Highlight urgent and pending > 10 days
-    today = datetime.now()
+    # Highlight urgent
+    def highlight_urgent(val):
+        return 'background-color: #FFD1D1' if val == 1 else ''
 
-    def highlight_rows(row):
-        style = ''
-        if row['urgent'] == 1:
-            style = 'background-color: #FFCCCC'  # urgent
-        if (today - row['created_at']).days > 10:
-            style = 'background-color: #FFD580'  # pending >10 days
-        return [style] * len(row)
+    st.dataframe(pending_orders.style.applymap(highlight_urgent, subset=["urgent"]), use_container_width=True)
 
-    styled_pending = pending_orders.style.apply(highlight_rows, axis=1)
-
-    st.dataframe(styled_pending, use_container_width=True)
-
+# --- Divider ---
 st.divider()
 
+# --- Dispatched Orders Section ---
+
 st.subheader("✅ Dispatched Orders")
+st.markdown(" ")
 
 if dispatched_orders.empty:
     st.info("ℹ️ No dispatched orders yet.")
@@ -71,6 +68,6 @@ else:
         st.download_button(
             label="📥 Download Dispatched Orders (CSV)",
             data=csv,
-            file_name='dispatched_orders.csv',
-            mime='text/csv'
+            file_name="dispatched_orders.csv",
+            mime="text/csv"
         )

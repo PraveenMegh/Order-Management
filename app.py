@@ -1,41 +1,65 @@
 import streamlit as st
-from utils.auth import login
+import sqlite3
+from utils.auth import check_login, login_user
+from utils.header import show_header
 
-st.set_page_config(page_title="Order Management - Shree Sai Industries", layout="wide")
+# --- Page Settings ---
+st.set_page_config(page_title="Shree Sai Industries - Login", page_icon="📦", layout="wide")
 
-# Logo and Title
-st.image("assets/logo.jpg", width=150)
-st.title("Shree Sai Industries - Order Management System")
+# --- Logo and Title ---
+show_header()
+# --- Mobile Responsive Styling ---
+st.markdown("""
+    <style>
+    /* Make input boxes and buttons bigger on mobile */
+    input, button, textarea {
+        font-size: 18px !important;
+    }
+    .stButton button {
+        padding: 10px 20px;
+        border-radius: 10px;
+    }
+    .stTextInput>div>div>input {
+        padding: 8px 10px;
+        border-radius: 8px;
+    }
+    .stTextArea>div>textarea {
+        padding: 8px 10px;
+        border-radius: 8px;
+    }
+    /* Center the Login Form */
+    div[data-testid="stForm"] {
+        max-width: 400px;
+        margin: auto;
+    }
+    /* Make headers centered */
+    h2 {
+        text-align: center;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# If already logged in
-if "username" in st.session_state:
-    st.success(f"Logged in as {st.session_state.username} ({st.session_state.role})")
-    st.sidebar.button("Logout", on_click=lambda: st.session_state.clear())
-else:
-    # Login form
-    with st.form("login_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Login")
+st.markdown("<h2 style='text-align: center;'>🔒 Please Login</h2>", unsafe_allow_html=True)
 
-        if submitted:
-            role = login(username, password)
-            if role:
-                st.session_state.username = username
-                st.session_state.role = role
-                st.rerun()
-            else:
-                st.error("Invalid username or password.")
+# --- DB Connection ---
+conn = sqlite3.connect('data/orders.db', check_same_thread=False)
+c = conn.cursor()
 
-# Routing based on role
-if "role" in st.session_state:
-    role = st.session_state.role
+# --- Login Form ---
+with st.form("login_form", clear_on_submit=False):
+    st.markdown(" ")
+    username = st.text_input("Username", placeholder="Enter your username", label_visibility="visible")
+    password = st.text_input("Password", placeholder="Enter your password", type="password", label_visibility="visible")
+    login_button = st.form_submit_button("Login")
 
-    if role == "Sales":
-        st.page_link("pages/1_Orders.py", label="Go to Orders Page ➡️")
-    elif role == "Dispatch":
-        st.page_link("pages/2_Dispatch.py", label="Go to Dispatch Page ➡️")
-    elif role == "Admin":
-        st.page_link("pages/3_Admin.py", label="Go to Admin Page ➡️")
-    elif role == "Accounts":
-        st.page_link("pages/4_Reports.py", label="Go to Reports Page ➡️")
+# --- Login Logic ---
+if login_button:
+    user = login_user(username, password)
+    if user:
+        st.session_state["username"] = user["username"]
+        st.session_state["role"] = user["role"]
+        st.success(f"✅ Welcome, {user['username']}! Redirecting...")
+
+        st.switch_page("pages/1_Orders.py")
+    else:
+        st.error("❌ Invalid username or password. Please try again.")
