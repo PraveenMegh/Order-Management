@@ -11,4 +11,4 @@ def show_header():
             </div>
         """, unsafe_allow_html=True)
 
-    st.markdown("<hr style='margin-top: 10px;'>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>🚀 Shree Sai Industries</h1>", unsafe_allow_html=True)
