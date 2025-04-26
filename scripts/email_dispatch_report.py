@@ -1,84 +1,101 @@
 import sqlite3
-import pandas as pd
+from datetime import datetime, timedelta
 from fpdf import FPDF
 import smtplib
 from email.message import EmailMessage
-from datetime import datetime, timedelta
 import os
 
-# Email Config
-SENDER_EMAIL = "praveeenmeghkrish@gmail.com"
-SENDER_PASSWORD = os.getenv("EMAIL_PASSWORD")  # App password stored as environment variable
-RECEIVER_EMAIL = "info@shreesaisalt.com"
+# Email credentials
+EMAIL_USER = os.getenv("EMAIL_USER")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 # Connect to database
 conn = sqlite3.connect('data/orders.db')
-yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+c = conn.cursor()
 
-# Fetch yesterday's dispatched orders
-query = '''
-SELECT id, customer_name, product_name, dispatched_quantity, urgent, username, dispatched_at
-FROM orders
-WHERE status = 'Dispatched' 
-AND DATE(dispatched_at) = ?
-ORDER BY dispatched_at ASC
-'''
+# Get today and yesterday
+today = datetime.now().date()
+yesterday = today - timedelta(days=1)
 
-df = pd.read_sql_query(query, conn, params=(yesterday,))
-conn.close()
+# Fetch pending orders
+pending_orders = c.execute("""
+    SELECT id, customer_name, product_name, quantity, urgent, created_at
+    FROM orders
+    WHERE status = 'Pending'
+    ORDER BY created_at ASC
+""").fetchall()
 
-if df.empty:
-    print("❌ No dispatched orders found for yesterday. Email not sent.")
+# Fetch dispatched yesterday orders
+dispatched_orders = c.execute("""
+    SELECT id, customer_name, product_name, dispatched_quantity, dispatched_at
+    FROM orders
+    WHERE status = 'Dispatched' AND DATE(dispatched_at) = ?
+    ORDER BY dispatched_at ASC
+""", (yesterday,)).fetchall()
+
+# If no pending and no dispatched, skip sending
+if not pending_orders and not dispatched_orders:
+    print("❌ No pending or dispatched orders found. Email not sent.")
     exit()
 
 # Create PDF
 pdf = FPDF()
 pdf.add_page()
 pdf.set_font("Arial", "B", 16)
-pdf.cell(0, 10, f"Daily Dispatch Report - {yesterday}", ln=True, align="C")
+pdf.cell(0, 10, "🛒 Pending Orders for Dispatch Today", ln=True)
+
+pdf.ln(5)
+
+# Pending orders section
+if pending_orders:
+    pdf.set_font("Arial", size=12)
+    for order in pending_orders:
+        id, customer, product, qty, urgent, created_at = order
+        created_at_fmt = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S.%f").strftime("%d-%m-%Y %I:%M %p")
+        urgent_mark = "✅ Urgent" if urgent else "Normal"
+        
+        if urgent:
+            pdf.set_text_color(255, 0, 0)  # Red color for urgent
+        else:
+            pdf.set_text_color(0, 0, 0)
+        
+        pdf.cell(0, 10, f"#{id} | {customer} | {product} | {qty} | {urgent_mark} | {created_at_fmt}", ln=True)
+
 pdf.ln(10)
+pdf.set_font("Arial", "B", 16)
+pdf.set_text_color(0, 0, 0)
+pdf.cell(0, 10, "✅ Orders Dispatched Yesterday", ln=True)
 
-# Table Header
-pdf.set_font("Arial", "B", 12)
-headers = ["Order ID", "Customer", "Product", "Qty", "Urgent", "Salesperson", "Dispatched At"]
-for header in headers:
-    pdf.cell(28, 8, header, border=1, align='C')
-pdf.ln()
+pdf.ln(5)
 
-# Table Rows
-pdf.set_font("Arial", "", 11)
-for _, row in df.iterrows():
-    pdf.cell(28, 8, str(row['id']), border=1)
-    pdf.cell(28, 8, row['customer_name'][:10], border=1)
-    pdf.cell(28, 8, row['product_name'][:10], border=1)
-    pdf.cell(28, 8, str(row['dispatched_quantity']), border=1)
-    pdf.cell(28, 8, "Yes" if row['urgent'] else "No", border=1)
-    pdf.cell(28, 8, row['username'][:10], border=1)
-    dispatched_time = pd.to_datetime(row['dispatched_at']).strftime('%H:%M')
-    pdf.cell(28, 8, dispatched_time, border=1)
-    pdf.ln()
+# Dispatched orders section
+if dispatched_orders:
+    pdf.set_font("Arial", size=12)
+    for order in dispatched_orders:
+        id, customer, product, dispatched_qty, dispatched_at = order
+        dispatched_at_fmt = datetime.strptime(dispatched_at, "%Y-%m-%d %H:%M:%S.%f").strftime("%d-%m-%Y %I:%M %p")
+        pdf.cell(0, 10, f"#{id} | {customer} | {product} | {dispatched_qty} | {dispatched_at_fmt}", ln=True)
 
 # Save PDF
-pdf_path = f"Dispatch_Report_{yesterday}.pdf"
-pdf.output(pdf_path)
+pdf_output_path = "dispatch_report.pdf"
+pdf.output(pdf_output_path)
 
-# Send Email
+# Prepare Email
 msg = EmailMessage()
-msg['Subject'] = f"Daily Dispatch Report - {yesterday}"
-msg['From'] = SENDER_EMAIL
-msg['To'] = RECEIVER_EMAIL
-
-msg.set_content(f"Hello,\n\nPlease find attached the Dispatch Report for {yesterday}.\n\nRegards,\nShree Sai Industries")
+msg["Subject"] = "📦 Daily Dispatch Report - Shree Sai Industries"
+msg["From"] = EMAIL_USER
+msg["To"] = "info@shreesaisalt.com"
+msg.set_content("Hello Team,\n\nAttached is the dispatch plan for today along with yesterday's completed dispatch summary.\n\nRegards,\nShree Sai Industries System")
 
 # Attach PDF
-with open(pdf_path, "rb") as f:
+with open(pdf_output_path, "rb") as f:
     file_data = f.read()
-    file_name = f.name
-msg.add_attachment(file_data, maintype="application", subtype="pdf", filename=file_name)
+    file_name = f"Dispatch_Report_{today.strftime('%d-%m-%Y')}.pdf"
+    msg.add_attachment(file_data, maintype="application", subtype="pdf", filename=file_name)
 
-# Connect to SMTP Server
+# Send Email
 with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-    smtp.login(SENDER_EMAIL, SENDER_PASSWORD)
+    smtp.login(EMAIL_USER, EMAIL_PASSWORD)
     smtp.send_message(msg)
 
-print(f"✅ Email sent successfully with {pdf_path}")
+print("✅ Dispatch report email sent successfully!")
