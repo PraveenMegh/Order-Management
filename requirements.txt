@@ -1,7 +1,2 @@
 streamlit
 pandas
-matplotlib
-openpyxl
-reportlab
-plotly
-# trigger reinstall).

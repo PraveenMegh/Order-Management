@@ -1,35 +1,21 @@
 import streamlit as st
 
-# Sample login credentials dictionary
-USERS = {
-    "sales": {"password": "sales123", "role": "Sales"},
-    "dispatch": {"password": "dispatch123", "role": "Dispatch"},
-    "admin": {"password": "admin123", "role": "Admin"},
-    "accounts": {"password": "accounts123", "role": "Accounts"},
+# Dummy users for now (later connected to database)
+users = {
+    "sales1": {"password": "sales123", "role": "Sales"},
+    "sales2": {"password": "sales123", "role": "Sales"},
+    "dispatch1": {"password": "dispatch123", "role": "Dispatch"},
+    "accounts1": {"password": "accounts123", "role": "Accounts"},
+    "admin1": {"password": "admin123", "role": "Admin"},
 }
 
-def check_login():
-    if "logged_in" not in st.session_state:
-        st.session_state.logged_in = False
+def login(username, password):
+    user = users.get(username)
+    if user and user["password"] == password:
+        return user["role"]
+    return None
 
-    if not st.session_state.logged_in:
-        st.subheader("🔐 Login to continue")
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        if st.button("Login"):
-            if username in USERS and USERS[username]["password"] == password:
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.session_state.role = USERS[username]["role"]
-                st.success(f"Welcome, {username} ({st.session_state.role}) 👋")
-                st.rerun()
-            else:
-                st.error("Invalid credentials")
-        st.stop()  # Stop app until login
-    else:
-        st.sidebar.markdown(f"👤 **{st.session_state.username}** ({st.session_state.role})")
-        if st.sidebar.button("Logout"):
-            st.session_state.logged_in = False
-            st.session_state.username = ""
-            st.session_state.role = ""
-            st.experimental_rerun()
+def check_login():
+    if "username" not in st.session_state:
+        st.error("Please login first from the main page.")
+        st.stop()
