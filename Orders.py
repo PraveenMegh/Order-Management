@@ -11,19 +11,18 @@ st.image("./assets/logo.png", width=200)
 
 check_login()
 
-# Role-based access control
 allowed_roles = ["Admin", "Sales"]
 if st.session_state.get("role") not in allowed_roles:
     st.error("🚫 You do not have permission to view this page.")
     st.stop()
 
-# Initialize session state for orders
+# Initialize orders
 if "orders" not in st.session_state:
     st.session_state.orders = []
 
 st.title("📦 New Orders")
 
-# ---- New Order Form ---- #
+# New Order Form
 with st.form("order_form"):
     customer_name = st.text_input("Customer Name")
     product = st.text_input("Product")
@@ -45,7 +44,7 @@ with st.form("order_form"):
         st.session_state.orders.append(order)
         st.success("Order submitted successfully!")
 
-# ---- Editable Table for Un-dispatched Orders ---- #
+# Edit Orders
 st.subheader("📝 Edit Orders (Before Dispatch)")
 for order in st.session_state.orders:
     if order["status"] == "Pending":

@@ -4,15 +4,30 @@ from utils.auth import check_login
 
 st.set_page_config(page_title="🔔 Notifications - Shree Sai Industries", layout="wide")
 
-# ✅ Display header and restrict access
 show_header()
-st.image("./assets/logo.png", width=200)  # Logo for consistency
+st.image("./assets/logo.png", width=200)
+
 check_login()
 
-# ✅ Optional: restrict to Admin role
-if st.session_state.get("role") != "Admin":
+allowed_roles = ["Admin"]
+if st.session_state.get("role") not in allowed_roles:
     st.error("🚫 You do not have permission to view this page.")
     st.stop()
 
 st.title("🔔 Notifications Setup")
-st.info("📤 Daily dispatch email is already scheduled at 9:30 AM using Streamlit Cloud.")
+st.info("📤 Daily dispatch email is scheduled at 9:30 AM.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

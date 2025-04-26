@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-from datetime import datetime, timedelta
+from datetime import datetime
 from header import show_header
 from utils.auth import check_login
 import io
@@ -13,7 +12,6 @@ st.image("./assets/logo.png", width=200)
 
 check_login()
 
-# Role-based access control
 allowed_roles = ["Admin", "Dispatch"]
 if st.session_state.get("role") not in allowed_roles:
     st.error("🚫 You do not have permission to view this page.")
@@ -21,10 +19,8 @@ if st.session_state.get("role") not in allowed_roles:
 
 st.title("🚚 Dispatch Orders")
 
-# Load orders from session
 orders = st.session_state.get("orders", [])
 
-# Filter pending orders (FIFO)
 pending_orders = [o for o in orders if o["status"] == "Pending"]
 
 if not pending_orders:
@@ -46,7 +42,6 @@ else:
                 order["dispatched_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 st.success("Order dispatched!")
 
-# Show original vs dispatched summary
 dispatched_orders = [o for o in orders if o["status"] == "Dispatched"]
 if dispatched_orders:
     st.subheader("📦 Dispatched Orders Summary")
@@ -54,7 +49,6 @@ if dispatched_orders:
     df.columns = ["Order ID", "Customer", "Product", "Original Qty", "Dispatched Qty", "Urgent", "Dispatched At"]
     st.dataframe(df, use_container_width=True)
 
-    # Download as Excel
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name="Dispatch Summary")
