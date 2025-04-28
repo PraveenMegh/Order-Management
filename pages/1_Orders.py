@@ -4,15 +4,17 @@ from utils.header import show_header
 from utils.auth import check_login
 from datetime import datetime
 
-# --- Auth and Header ---
+# --- Page Settings ---
 check_login()
 show_header()
+
+st.header("📦 Place a New Order")
 
 # --- Database Connection ---
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)
 c = conn.cursor()
 
-# --- Create Table if Not Exists ---
+# --- Create Table if not exists ---
 c.execute('''
 CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,46 +27,41 @@ CREATE TABLE IF NOT EXISTS orders (
     status TEXT DEFAULT 'Pending',
     created_at TEXT,
     dispatched_quantity INTEGER,
-    dispatched_at TEXT
+    dispatched_at TEXT,
+    price REAL,
+    currency TEXT,
+    unit_type TEXT,
+    dispatched_by TEXT
 )
 ''')
 conn.commit()
 
-# --- Functions ---
-def insert_order(username, customer_name, product_name, quantity, unit, urgent):
+# --- Insert Order Function ---
+def insert_order(username, customer_name, product_name, quantity, unit, urgent, price, currency, unit_type):
     c.execute('''
-        INSERT INTO orders (username, customer_name, product_name, quantity, unit, urgent, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (username, customer_name, product_name, quantity, unit, urgent, datetime.now()))
+        INSERT INTO orders (username, customer_name, product_name, quantity, unit, urgent, created_at, price, currency, unit_type)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (username, customer_name, product_name, quantity, unit, urgent, datetime.now(), price, currency, unit_type))
     conn.commit()
 
+# --- Fetch Orders Function ---
 def fetch_orders(username):
-    c.execute('SELECT * FROM orders WHERE username = ?', (username,))
+    if st.session_state.role == "Admin":
+        c.execute('SELECT * FROM orders')
+    else:
+        c.execute('SELECT * FROM orders WHERE username = ?', (username,))
     return c.fetchall()
 
-# --- UI Start ---
-
-st.header("📦 Place a New Order")
-st.markdown(" ")
-
-# --- Order Form ---
+# --- Place New Order Form ---
 with st.form("order_form"):
     customer_name = st.text_input("Customer Name")
-
-    product_list = [""] + [row[0] for row in c.execute('SELECT DISTINCT product_name FROM orders').fetchall()]
-    product_name = st.selectbox("Product Name", options=product_list)
-    if product_name == "":
-        product_name = st.text_input("New Product Name")
-
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        quantity = st.number_input("Quantity", min_value=1)
-
-    with col2:
-        unit = st.selectbox("Unit", ["kg", "grams", "units"])
-
+    product_name = st.text_input("Product Name")
+    quantity = st.number_input("Quantity", min_value=1)
+    unit = st.selectbox("Unit", ["KG", "Grams", "Nos", "Units"])
     urgent = st.checkbox("Mark as Urgent")
+    price = st.number_input("Price per unit", min_value=0.0)
+    currency = st.selectbox("Currency", ["INR", "USD"])
+    unit_type = st.selectbox("Unit Type", ["Per KG", "Per Gram", "Per Unit", "Per Nos"])
 
     submit = st.form_submit_button("Submit Order")
 
@@ -75,37 +72,54 @@ with st.form("order_form"):
             product_name,
             quantity,
             unit,
-            int(urgent)
+            int(urgent),
+            price,
+            currency,
+            unit_type
         )
-        st.success("Order placed successfully!")
+        st.success("✅ Order placed successfully!")
         st.rerun()
 
-# --- Display Orders Section ---
+st.divider()
 
+# --- Show Your Orders ---
 st.header("📝 Your Orders (Editable Before Dispatch)")
-st.markdown(" ")
 
 orders = fetch_orders(st.session_state.username)
 
 if orders:
     for order in orders:
-        id, username, customer_name, product_name, quantity, unit, urgent, status, created_at, dispatched_quantity, dispatched_at = order
+        id, username, customer_name, product_name, quantity, unit, urgent, status, created_at, dispatched_quantity, dispatched_at, price, currency, unit_type, dispatched_by = order
 
-        with st.expander(f"Order #{id} - {product_name}"):
+        with st.expander(f"Order #{id} - {product_name} ({quantity} {unit})"):
             new_customer = st.text_input("Customer Name", value=customer_name, key=f"cust_{id}")
             new_product = st.text_input("Product Name", value=product_name, key=f"prod_{id}")
             new_qty = st.number_input("Quantity", value=quantity, min_value=1, key=f"qty_{id}")
-            new_unit = st.selectbox("Unit", ["kg", "grams", "units"], index=["kg", "grams", "units"].index(unit), key=f"unit_{id}")
+
+            # --- Corrected Unit Dropdown ---
+            unit_options = ["KG", "Grams", "Nos", "Units"]
+            safe_unit = unit.upper() if unit else "KG"
+            new_unit = st.selectbox(
+                "Unit",
+                unit_options,
+                index=unit_options.index(safe_unit) if safe_unit in unit_options else 0,
+                key=f"unit_{id}"
+            )
+
             new_urgent = st.checkbox("Urgent", value=bool(urgent), key=f"urg_{id}")
+            new_price = st.number_input("Price", value=price if price else 0.0, key=f"price_{id}")
+            new_currency = st.selectbox("Currency", ["INR", "USD"], index=0 if currency == "INR" else 1, key=f"currency_{id}")
+            new_unit_type = st.selectbox("Unit Type", ["Per KG", "Per Gram", "Per Unit", "Per Nos"], index=0, key=f"unit_type_{id}")
 
             if st.button("Update Order", key=f"update_{id}"):
                 c.execute('''
                     UPDATE orders
-                    SET customer_name = ?, product_name = ?, quantity = ?, unit = ?, urgent = ?
+                    SET customer_name = ?, product_name = ?, quantity = ?, unit = ?, urgent = ?, price = ?, currency = ?, unit_type = ?
                     WHERE id = ?
-                ''', (new_customer, new_product, new_qty, new_unit, int(new_urgent), id))
+                ''', (new_customer, new_product, new_qty, new_unit, int(new_urgent), new_price, new_currency, new_unit_type, id))
                 conn.commit()
-                st.success("Order updated successfully!")
+                st.success(f"✅ Order #{id} updated successfully!")
                 st.rerun()
 else:
-    st.info("No orders placed yet.")
+    st.info("ℹ️ No orders placed yet.")
+

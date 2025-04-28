@@ -1,6 +1,5 @@
 import streamlit as st
 import sqlite3
-from utils.auth import check_login, login_user
 from utils.header import show_header
 
 # --- Page Settings ---
@@ -8,10 +7,10 @@ st.set_page_config(page_title="Shree Sai Industries - Login", page_icon="📦", 
 
 # --- Logo and Title ---
 show_header()
+
 # --- Mobile Responsive Styling ---
 st.markdown("""
     <style>
-    /* Make input boxes and buttons bigger on mobile */
     input, button, textarea {
         font-size: 18px !important;
     }
@@ -27,12 +26,10 @@ st.markdown("""
         padding: 8px 10px;
         border-radius: 8px;
     }
-    /* Center the Login Form */
     div[data-testid="stForm"] {
         max-width: 400px;
         margin: auto;
     }
-    /* Make headers centered */
     h2 {
         text-align: center;
     }
@@ -41,15 +38,37 @@ st.markdown("""
 
 st.markdown("<h2 style='text-align: center;'>🔒 Please Login</h2>", unsafe_allow_html=True)
 
-# --- DB Connection ---
+# --- Database Connection ---
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)
 c = conn.cursor()
+
+# --- Create Users Table if Not Exists ---
+c.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL
+    )
+''')
+conn.commit()
+
+# --- Login Function ---
+def login_user(username, password):
+    cursor = conn.cursor()
+    cursor.execute("SELECT username, password, role FROM users WHERE username = ?", (username,))
+    result = cursor.fetchone()
+    if result:
+        db_username, db_password, db_role = result
+        if password == db_password:
+            return {"username": db_username, "role": db_role}
+    return None
 
 # --- Login Form ---
 with st.form("login_form", clear_on_submit=False):
     st.markdown(" ")
-    username = st.text_input("Username", placeholder="Enter your username", label_visibility="visible")
-    password = st.text_input("Password", placeholder="Enter your password", type="password", label_visibility="visible")
+    username = st.text_input("Username", placeholder="Enter your username")
+    password = st.text_input("Password", placeholder="Enter your password", type="password")
     login_button = st.form_submit_button("Login")
 
 # --- Login Logic ---
@@ -59,7 +78,6 @@ if login_button:
         st.session_state["username"] = user["username"]
         st.session_state["role"] = user["role"]
         st.success(f"✅ Welcome, {user['username']}! Redirecting...")
-
         st.switch_page("pages/1_Orders.py")
     else:
         st.error("❌ Invalid username or password. Please try again.")

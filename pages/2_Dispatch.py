@@ -34,13 +34,12 @@ dispatched_orders = c.fetchall()
 # --- Pending Orders Section ---
 
 if st.session_state.role in ["Dispatch", "Admin"]:
-
     st.subheader("📦 Pending Orders (FIFO)")
     st.markdown(" ")
 
     if pending_orders:
         for order in pending_orders:
-            id, username, customer_name, product_name, quantity, unit, urgent, status, created_at, dispatched_quantity, dispatched_at = order
+            id, username, customer_name, product_name, quantity, unit, urgent, status, created_at, dispatched_quantity, dispatched_at, price, currency, unit_type, dispatched_by = order
 
             created_fmt = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S.%f").strftime("%d-%m-%Y %I:%M %p")
 
@@ -49,6 +48,8 @@ if st.session_state.role in ["Dispatch", "Admin"]:
                 st.markdown(f"**Customer**: {customer_name}")
                 st.markdown(f"**Salesperson**: {username}")
                 st.markdown(f"**Original Quantity**: {quantity} {unit}")
+                st.markdown(f"**Unit Price**: {price} {currency}")
+                st.markdown(f"**Unit Type**: {unit_type}")
                 st.markdown(f"**Urgent**: {'🔥 Yes' if urgent else 'No'}")
 
                 dispatch_qty = st.number_input(
@@ -65,9 +66,10 @@ if st.session_state.role in ["Dispatch", "Admin"]:
                         UPDATE orders
                         SET status = 'Dispatched',
                             dispatched_quantity = ?,
-                            dispatched_at = ?
+                            dispatched_at = ?,
+                            dispatched_by = ?
                         WHERE id = ?
-                    ''', (dispatch_qty, now, id))
+                    ''', (dispatch_qty, now, st.session_state.username, id))
                     conn.commit()
                     st.success(f"Order #{id} dispatched successfully!")
                     st.rerun()
@@ -86,10 +88,10 @@ st.markdown(" ")
 if dispatched_orders:
     data = []
     for order in dispatched_orders:
-        id, username, customer_name, product_name, quantity, unit, urgent, status, created_at, dispatched_quantity, dispatched_at = order
+        id, username, customer_name, product_name, quantity, unit, urgent, status, created_at, dispatched_quantity, dispatched_at, price, currency, unit_type, dispatched_by = order
 
         created_fmt = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S.%f").strftime("%d-%m-%Y %I:%M %p")
-        dispatched_fmt = datetime.strptime(dispatched_at, "%Y-%m-%d %H:%M:%S.%f").strftime("%d-%m-%Y %I:%M %p")
+        dispatched_fmt = datetime.strptime(dispatched_at, "%Y-%m-%d %H:%M:%S.%f").strftime("%d-%m-%Y %I:%M %p") if dispatched_at else ""
 
         data.append({
             "Order ID": id,
@@ -97,10 +99,12 @@ if dispatched_orders:
             "Product": product_name,
             "Ordered Qty": f"{quantity} {unit}",
             "Dispatched Qty": f"{dispatched_quantity} {unit}" if dispatched_quantity else "",
-            "Urgent": "🔥 Yes" if urgent else "No",
+            "Price per Unit": f"{price} {currency}",
+            "Unit Type": unit_type,
             "Created At": created_fmt,
             "Dispatched At": dispatched_fmt,
-            "Salesperson": username
+            "Salesperson": username,
+            "Dispatched By": dispatched_by
         })
 
     df = pd.DataFrame(data)
@@ -108,6 +112,10 @@ if dispatched_orders:
     # Sales view their own dispatched orders
     if st.session_state.role == "Sales":
         df = df[df["Salesperson"] == st.session_state.username]
+
+    # Dispatch users view only their dispatched entries
+    if st.session_state.role == "Dispatch":
+        df = df[df["Dispatched By"] == st.session_state.username]
 
     st.dataframe(df, use_container_width=True)
 
@@ -126,3 +134,9 @@ if dispatched_orders:
 
 else:
     st.info("ℹ️ No dispatched orders yet.")
+
+# --- Sidebar Logout ---
+st.sidebar.title(f"Welcome, {st.session_state.get('username', '')}")
+if st.sidebar.button("Logout"):
+    st.session_state.clear()
+    st.switch_page("app.py")
