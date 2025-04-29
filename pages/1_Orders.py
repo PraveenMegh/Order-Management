@@ -1,13 +1,19 @@
 import streamlit as st
 import sqlite3
+from datetime import datetime
 from utils.header import show_header
 from utils.auth import check_login
-from datetime import datetime
 
-# --- Page Settings ---
+# --- Authentication ---
 check_login()
-show_header()
 
+# ✅ Restrict this page to Admin and Sales only
+if st.session_state.get("role") not in ["Admin", "Sales"]:
+    st.error("🚫 You do not have permission to access this page.")
+    st.stop()
+
+# ✅ Show UI only if user has access
+show_header()
 st.header("📦 Place a New Order")
 
 # --- Database Connection ---
@@ -16,23 +22,23 @@ c = conn.cursor()
 
 # --- Create Table if not exists ---
 c.execute('''
-CREATE TABLE IF NOT EXISTS orders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT,
-    customer_name TEXT,
-    product_name TEXT,
-    quantity INTEGER,
-    unit TEXT,
-    urgent BOOLEAN,
-    status TEXT DEFAULT 'Pending',
-    created_at TEXT,
-    dispatched_quantity INTEGER,
-    dispatched_at TEXT,
-    price REAL,
-    currency TEXT,
-    unit_type TEXT,
-    dispatched_by TEXT
-)
+    CREATE TABLE IF NOT EXISTS orders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        customer_name TEXT,
+        product_name TEXT,
+        quantity INTEGER,
+        unit TEXT,
+        urgent BOOLEAN,
+        status TEXT DEFAULT 'Pending',
+        created_at TEXT,
+        dispatched_quantity INTEGER,
+        dispatched_at TEXT,
+        price REAL,
+        currency TEXT,
+        unit_type TEXT,
+        dispatched_by TEXT
+    )
 ''')
 conn.commit()
 
@@ -96,7 +102,6 @@ if orders:
             new_product = st.text_input("Product Name", value=product_name, key=f"prod_{id}")
             new_qty = st.number_input("Quantity", value=quantity, min_value=1, key=f"qty_{id}")
 
-            # --- Corrected Unit Dropdown ---
             unit_options = ["KG", "Grams", "Nos", "Units"]
             safe_unit = unit.upper() if unit else "KG"
             new_unit = st.selectbox(
@@ -122,4 +127,3 @@ if orders:
                 st.rerun()
 else:
     st.info("ℹ️ No orders placed yet.")
-

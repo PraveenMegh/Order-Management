@@ -9,7 +9,19 @@ from utils.auth import check_login
 check_login()
 show_header()
 
+# ✅ Only Admin or Dispatch can access
+if st.session_state.get("role") not in ["Admin", "Dispatch"]:
+    st.error("🚫 You do not have permission to access this page.")
+    st.stop()
+
+# ✅ Further restrict: Dispatch cannot access orders
+if st.session_state.get("role") == "Dispatch":
+    st.sidebar.markdown("🚚 Dispatch role active")
+else:
+    st.sidebar.markdown("👑 Admin mode")
+
 st.header("🚚 Dispatch Orders")
+st.caption("⚡ Please dispatch orders in FIFO (First In, First Out) sequence. Oldest orders are shown first.")
 st.markdown(" ")
 
 # --- Database Connection ---
@@ -32,56 +44,51 @@ ORDER BY dispatched_at DESC
 dispatched_orders = c.fetchall()
 
 # --- Pending Orders Section ---
+st.subheader("📦 Pending Orders (FIFO)")
+st.markdown(" ")
 
-if st.session_state.role in ["Dispatch", "Admin"]:
-    st.subheader("📦 Pending Orders (FIFO)")
-    st.markdown(" ")
+if pending_orders:
+    for order in pending_orders:
+        id, username, customer_name, product_name, quantity, unit, urgent, status, created_at, dispatched_quantity, dispatched_at, price, currency, unit_type, dispatched_by = order
 
-    if pending_orders:
-        for order in pending_orders:
-            id, username, customer_name, product_name, quantity, unit, urgent, status, created_at, dispatched_quantity, dispatched_at, price, currency, unit_type, dispatched_by = order
+        created_fmt = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S.%f").strftime("%d-%m-%Y %I:%M %p")
 
-            created_fmt = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S.%f").strftime("%d-%m-%Y %I:%M %p")
+        with st.expander(f"Order #{id} - {product_name} ({quantity} {unit})"):
+            st.markdown(f"**Created On**: {created_fmt}")
+            st.markdown(f"**Customer**: {customer_name}")
+            st.markdown(f"**Salesperson**: {username}")
+            st.markdown(f"**Original Quantity**: {quantity} {unit}")
+            st.markdown(f"**Unit Price**: {price} {currency}")
+            st.markdown(f"**Unit Type**: {unit_type}")
+            st.markdown(f"**Urgent**: {'🔥 Yes' if urgent else 'No'}")
 
-            with st.expander(f"Order #{id} - {product_name} ({quantity} {unit})"):
-                st.markdown(f"**Created On**: {created_fmt}")
-                st.markdown(f"**Customer**: {customer_name}")
-                st.markdown(f"**Salesperson**: {username}")
-                st.markdown(f"**Original Quantity**: {quantity} {unit}")
-                st.markdown(f"**Unit Price**: {price} {currency}")
-                st.markdown(f"**Unit Type**: {unit_type}")
-                st.markdown(f"**Urgent**: {'🔥 Yes' if urgent else 'No'}")
+            dispatch_qty = st.number_input(
+                "Dispatch Quantity",
+                min_value=0,
+                max_value=quantity,
+                value=quantity,
+                key=f"dispatch_qty_{id}"
+            )
 
-                dispatch_qty = st.number_input(
-                    "Dispatch Quantity",
-                    min_value=0,
-                    max_value=quantity,
-                    value=quantity,
-                    key=f"dispatch_qty_{id}"
-                )
-
-                if st.button("Confirm Dispatch", key=f"confirm_dispatch_{id}"):
-                    now = datetime.now()
-                    c.execute('''
-                        UPDATE orders
-                        SET status = 'Dispatched',
-                            dispatched_quantity = ?,
-                            dispatched_at = ?,
-                            dispatched_by = ?
-                        WHERE id = ?
-                    ''', (dispatch_qty, now, st.session_state.username, id))
-                    conn.commit()
-                    st.success(f"Order #{id} dispatched successfully!")
-                    st.rerun()
-    else:
-        st.info("✅ No pending orders for dispatch.")
+            if st.button("Confirm Dispatch", key=f"confirm_dispatch_{id}"):
+                now = datetime.now()
+                c.execute('''
+                    UPDATE orders
+                    SET status = 'Dispatched',
+                        dispatched_quantity = ?,
+                        dispatched_at = ?,
+                        dispatched_by = ?
+                    WHERE id = ?
+                ''', (dispatch_qty, now, st.session_state.username, id))
+                conn.commit()
+                st.success(f"Order #{id} dispatched successfully!")
+                st.rerun()
 else:
-    st.warning("🚫 Only Dispatch or Admin can process dispatches.")
+    st.info("✅ No pending orders for dispatch.")
 
 st.divider()
 
 # --- Dispatched Orders Section ---
-
 st.subheader("✅ Dispatched Orders")
 st.markdown(" ")
 
@@ -131,7 +138,6 @@ if dispatched_orders:
                 file_name=f"Dispatch_Summary_{datetime.now().date()}.xlsx",
                 mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
-
 else:
     st.info("ℹ️ No dispatched orders yet.")
 

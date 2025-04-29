@@ -8,6 +8,11 @@ from utils.auth import check_login
 check_login()
 show_header()
 
+# --- Restrict access to Admin only ---
+if st.session_state.get("role") != "Admin":
+    st.error("🚫 You do not have permission to access this page.")
+    st.stop()
+
 # --- Database Connection ---
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)
 c = conn.cursor()
