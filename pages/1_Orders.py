@@ -1,18 +1,16 @@
 import streamlit as st
 import sqlite3
-from datetime import datetime
 from utils.header import show_header
 from utils.auth import check_login
+from datetime import datetime
 
-# --- Authentication ---
+# --- Page Access Control ---
 check_login()
-
-# ✅ Restrict this page to Admin and Sales only
 if st.session_state.get("role") not in ["Admin", "Sales"]:
     st.error("🚫 You do not have permission to access this page.")
     st.stop()
 
-# ✅ Show UI only if user has access
+# --- Page Header ---
 show_header()
 st.header("📦 Place a New Order")
 
@@ -59,38 +57,41 @@ def fetch_orders(username):
     return c.fetchall()
 
 # --- Place New Order Form ---
-with st.form("order_form"):
-    customer_name = st.text_input("Customer Name")
-    product_name = st.text_input("Product Name")
-    quantity = st.number_input("Quantity", min_value=1)
-    unit = st.selectbox("Unit", ["KG", "Grams", "Nos", "Units"])
-    urgent = st.checkbox("Mark as Urgent")
-    price = st.number_input("Price per unit", min_value=0.0)
-    currency = st.selectbox("Currency", ["INR", "USD"])
-    unit_type = st.selectbox("Unit Type", ["Per KG", "Per Gram", "Per Unit", "Per Nos"])
+st.subheader("➕ New Order Entry")
+with st.container():
+    with st.form("order_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            customer_name = st.text_input("Customer Name")
+            product_name = st.text_input("Product Name")
+            quantity = st.number_input("Quantity", min_value=1)
+            unit = st.selectbox("Unit", ["KG", "Grams", "Nos", "Units"])
+        with col2:
+            urgent = st.checkbox("Mark as Urgent")
+            price = st.number_input("Price per unit", min_value=0.0)
+            currency = st.selectbox("Currency", ["INR", "USD"])
+            unit_type = st.selectbox("Unit Type", ["Per KG", "Per Gram", "Per Unit", "Per Nos"])
 
-    submit = st.form_submit_button("Submit Order")
-
-    if submit:
-        insert_order(
-            st.session_state.username,
-            customer_name,
-            product_name,
-            quantity,
-            unit,
-            int(urgent),
-            price,
-            currency,
-            unit_type
-        )
-        st.success("✅ Order placed successfully!")
-        st.rerun()
+        submit = st.form_submit_button("Submit Order")
+        if submit:
+            insert_order(
+                st.session_state.username,
+                customer_name,
+                product_name,
+                quantity,
+                unit,
+                int(urgent),
+                price,
+                currency,
+                unit_type
+            )
+            st.success("✅ Order placed successfully!")
+            st.rerun()
 
 st.divider()
 
-# --- Show Your Orders ---
-st.header("📝 Your Orders (Editable Before Dispatch)")
-
+# --- Show Orders Section ---
+st.subheader("📜 Your Orders (Editable Before Dispatch)")
 orders = fetch_orders(st.session_state.username)
 
 if orders:
@@ -98,23 +99,17 @@ if orders:
         id, username, customer_name, product_name, quantity, unit, urgent, status, created_at, dispatched_quantity, dispatched_at, price, currency, unit_type, dispatched_by = order
 
         with st.expander(f"Order #{id} - {product_name} ({quantity} {unit})"):
-            new_customer = st.text_input("Customer Name", value=customer_name, key=f"cust_{id}")
-            new_product = st.text_input("Product Name", value=product_name, key=f"prod_{id}")
-            new_qty = st.number_input("Quantity", value=quantity, min_value=1, key=f"qty_{id}")
-
-            unit_options = ["KG", "Grams", "Nos", "Units"]
-            safe_unit = unit.upper() if unit else "KG"
-            new_unit = st.selectbox(
-                "Unit",
-                unit_options,
-                index=unit_options.index(safe_unit) if safe_unit in unit_options else 0,
-                key=f"unit_{id}"
-            )
-
-            new_urgent = st.checkbox("Urgent", value=bool(urgent), key=f"urg_{id}")
-            new_price = st.number_input("Price", value=price if price else 0.0, key=f"price_{id}")
-            new_currency = st.selectbox("Currency", ["INR", "USD"], index=0 if currency == "INR" else 1, key=f"currency_{id}")
-            new_unit_type = st.selectbox("Unit Type", ["Per KG", "Per Gram", "Per Unit", "Per Nos"], index=0, key=f"unit_type_{id}")
+            col1, col2 = st.columns(2)
+            with col1:
+                new_customer = st.text_input("Customer Name", value=customer_name, key=f"cust_{id}")
+                new_product = st.text_input("Product Name", value=product_name, key=f"prod_{id}")
+                new_qty = st.number_input("Quantity", value=quantity, min_value=1, key=f"qty_{id}")
+                new_unit = st.selectbox("Unit", ["KG", "Grams", "Nos", "Units"], index=["KG", "Grams", "Nos", "Units"].index(unit), key=f"unit_{id}")
+            with col2:
+                new_urgent = st.checkbox("Urgent", value=bool(urgent), key=f"urg_{id}")
+                new_price = st.number_input("Price", value=price if price else 0.0, key=f"price_{id}")
+                new_currency = st.selectbox("Currency", ["INR", "USD"], index=0 if currency == "INR" else 1, key=f"currency_{id}")
+                new_unit_type = st.selectbox("Unit Type", ["Per KG", "Per Gram", "Per Unit", "Per Nos"], index=0, key=f"unit_type_{id}")
 
             if st.button("Update Order", key=f"update_{id}"):
                 c.execute('''
@@ -127,3 +122,9 @@ if orders:
                 st.rerun()
 else:
     st.info("ℹ️ No orders placed yet.")
+
+st.divider()
+if st.button("🔒 Logout"):
+    st.session_state.clear()
+    st.switch_page("app.py")
+

@@ -3,14 +3,17 @@ import sqlite3
 from utils.header import show_header
 from utils.auth import check_login
 
-# --- Authentication ---
+# --- Authentication and Access Control ---
 check_login()
-show_header()
-
-# --- Allow Only Admin ---
 if st.session_state.get("role") != "Admin":
-    st.error("🚫 You do not have permission to access this page.")
+    st.error("\ud83d\udeab You do not have permission to access this page.")
     st.stop()
+
+# --- Page Header ---
+show_header()
+st.image("assets/company_logo.png", width=200)
+st.title("Shree Sai Industries - Admin Panel")
+st.markdown("---")
 
 # --- Database Connection ---
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)
@@ -27,10 +30,11 @@ CREATE TABLE IF NOT EXISTS users (
 ''')
 conn.commit()
 
-# --- Functions to interact with users table ---
+# --- Fetch Users Function ---
 def fetch_users():
     return c.execute('SELECT id, username, role FROM users').fetchall()
 
+# --- Functions for Users ---
 def add_user(username, password, role):
     try:
         c.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', (username, password, role))
@@ -47,21 +51,22 @@ def delete_user(user_id):
     c.execute('DELETE FROM users WHERE id = ?', (user_id,))
     conn.commit()
 
-# --- UI for Admin Panel ---
-st.title("🛠️ Admin Panel - User Management")
-
-st.subheader("👥 Existing Users")
+# --- UI Layout ---
+st.subheader("\ud83d\udc65 Existing Users")
 users = fetch_users()
 
 if users:
     for user in users:
         id, username, role = user
-        with st.expander(f"🔹 {username} ({role})"):
-            new_password = st.text_input("New Password", key=f"pass_{id}")
-            new_role = st.selectbox("Role", ["Sales", "Dispatch", "Accounts", "Admin"], index=["Sales", "Dispatch", "Accounts", "Admin"].index(role), key=f"role_{id}")
-
+        with st.expander(f"\ud83d\udd39 {username} ({role})"):
             col1, col2 = st.columns(2)
             with col1:
+                new_password = st.text_input("New Password", key=f"pass_{id}")
+            with col2:
+                new_role = st.selectbox("Role", ["Sales", "Dispatch", "Accounts", "Admin"], index=["Sales", "Dispatch", "Accounts", "Admin"].index(role), key=f"role_{id}")
+
+            col3, col4 = st.columns(2)
+            with col3:
                 if st.button("✏️ Update User", key=f"update_{id}"):
                     if new_password:
                         update_user(id, new_password, new_role)
@@ -69,14 +74,13 @@ if users:
                         st.rerun()
                     else:
                         st.warning("⚠️ Please enter a new password.")
-
-            with col2:
+            with col4:
                 if st.button("🗑️ Delete User", key=f"delete_{id}"):
                     delete_user(id)
                     st.success(f"✅ Deleted user {username} successfully!")
                     st.rerun()
 else:
-    st.info("No users found.")
+    st.info("ℹ️ No users found.")
 
 st.divider()
 
@@ -99,3 +103,9 @@ with st.form("add_user_form"):
                 st.error("🚫 Username already exists. Please choose another.")
         else:
             st.warning("⚠️ Please fill all fields.")
+
+# --- Mobile-friendly Logout Button ---
+st.divider()
+if st.button("🔒 Logout"):
+    st.session_state.clear()
+    st.switch_page("app.py")
