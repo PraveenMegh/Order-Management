@@ -104,7 +104,9 @@ if orders:
                 new_customer = st.text_input("Customer Name", value=customer_name, key=f"cust_{id}")
                 new_product = st.text_input("Product Name", value=product_name, key=f"prod_{id}")
                 new_qty = st.number_input("Quantity", value=quantity, min_value=1, key=f"qty_{id}")
-                new_unit = st.selectbox("Unit", ["KG", "Grams", "Nos", "Units"], index=["KG", "Grams", "Nos", "Units"].index(unit), key=f"unit_{id}")
+                unit_list = ["KG", "Grams", "Nos", "Units"]
+                default_index = unit_list.index(unit) if unit in unit_list else 0
+                new_unit = st.selectbox("Unit", unit_list, index=default_index, key=f"unit_{id}")
             with col2:
                 new_urgent = st.checkbox("Urgent", value=bool(urgent), key=f"urg_{id}")
                 new_price = st.number_input("Price", value=price if price else 0.0, key=f"price_{id}")
