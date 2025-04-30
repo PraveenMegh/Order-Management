@@ -6,12 +6,12 @@ from utils.auth import check_login
 # --- Authentication and Access Control ---
 check_login()
 if st.session_state.get("role") != "Admin":
-    st.error("\ud83d\udeab You do not have permission to access this page.")
+    st.error("⛔ You do not have permission to access this page.")
     st.stop()
 
 # --- Page Header ---
 show_header()
-st.image("assets/company_logo.png", width=200)
+st.image("assets/company_logo.jpg", width=200)
 st.title("Shree Sai Industries - Admin Panel")
 st.markdown("---")
 
@@ -52,13 +52,13 @@ def delete_user(user_id):
     conn.commit()
 
 # --- UI Layout ---
-st.subheader("\ud83d\udc65 Existing Users")
+st.subheader("👥 Existing Users")
 users = fetch_users()
 
 if users:
     for user in users:
         id, username, role = user
-        with st.expander(f"\ud83d\udd39 {username} ({role})"):
+        with st.expander(f"🔹 {username} ({role})"):
             col1, col2 = st.columns(2)
             with col1:
                 new_password = st.text_input("New Password", key=f"pass_{id}")

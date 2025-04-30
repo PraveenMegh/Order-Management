@@ -8,12 +8,12 @@ from utils.auth import check_login
 # --- Authentication and Access Control ---
 check_login()
 if st.session_state.get("role") not in ["Admin", "Dispatch"]:
-    st.error("\ud83d\udeab You do not have permission to access this page.")
+    st.error("⛔ You do not have permission to access this page.")
     st.stop()
 
 # --- Page Header ---
 show_header()
-st.header("\ud83d\ude9a Dispatch Orders")
+st.header("🚚 Dispatch Orders")
 st.markdown(" ")
 
 # --- Database Connection ---
@@ -30,7 +30,7 @@ st.caption("\u26a1\ufe0f Please dispatch orders in FIFO (First In, First Out) se
 if pending_orders.empty:
     st.success("✅ No pending orders for dispatch.")
 else:
-    st.subheader("\ud83d\udce6 Pending Orders")
+    st.subheader("📦 Pending Orders")
     for idx, order in pending_orders.iterrows():
         with st.expander(f"Order #{order['id']} - {order['product_name']} ({order['quantity']} {order['unit']})"):
             st.markdown(f"**Customer**: {order['customer_name']}")
@@ -38,7 +38,11 @@ else:
             st.markdown(f"**Unit Price**: {order['price']} {order['currency']}")
             st.markdown(f"**Unit Type**: {order['unit_type']}")
             st.markdown(f"**Urgent**: {'🔥 Yes' if order['urgent'] else 'No'}")
-            st.markdown(f"**Created On**: {datetime.strptime(order['created_at'], '%Y-%m-%d %H:%M:%S.%f').strftime('%d-%m-%Y %I:%M %p')}")
+        try:
+            created_at = datetime.strptime(order['created_at'], '%Y-%m-%d %H:%M:%S.%f')
+            st.markdown(f"**Created On**: {created_at.strftime('%d-%m-%Y %I:%M %p')}")
+        except (KeyError, ValueError, TypeError):
+            st.markdown("**Created On**: Invalid or missing timestamp")
 
             dispatch_qty = st.number_input(
                 "Dispatch Quantity",
@@ -70,9 +74,12 @@ st.subheader("✅ Dispatched Orders")
 if dispatched_orders.empty:
     st.info("ℹ️ No dispatched orders yet.")
 else:
+    else:
     df = dispatched_orders.copy()
-    df['created_at'] = pd.to_datetime(df['created_at']).dt.strftime('%d-%m-%Y %I:%M %p')
-    df['dispatched_at'] = pd.to_datetime(df['dispatched_at']).dt.strftime('%d-%m-%Y %I:%M %p')
+    if 'created_at' in df.columns:
+        df['created_at'] = pd.to_datetime(df['created_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
+    if 'dispatched_at' in df.columns:
+        df['dispatched_at'] = pd.to_datetime(df['dispatched_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
 
     # Dispatch users view only their dispatched entries
     if st.session_state.role == "Dispatch":
@@ -83,7 +90,7 @@ else:
     if st.session_state.role == "Admin":
         csv = df.to_csv(index=False).encode('utf-8')
         st.download_button(
-            label="\ud83d\udcc5 Download Dispatched Orders (CSV)",
+            label="🗓️ Download Dispatched Orders (CSV)"
             data=csv,
             file_name=f"Dispatched_Orders_{datetime.now().date()}.csv",
             mime="text/csv"
