@@ -74,7 +74,6 @@ st.subheader("✅ Dispatched Orders")
 if dispatched_orders.empty:
     st.info("ℹ️ No dispatched orders yet.")
 else:
-    else:
     df = dispatched_orders.copy()
     if 'created_at' in df.columns:
         df['created_at'] = pd.to_datetime(df['created_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
