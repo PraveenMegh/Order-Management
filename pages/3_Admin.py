@@ -11,7 +11,7 @@ if st.session_state.get("role") != "Admin":
 
 # --- Page Header ---
 show_header()
-st.image("assets/company_logo.jpg", width=200)
+st.image("assets/logo.jpg", width=200)
 st.title("Shree Sai Industries - Admin Panel")
 st.markdown("---")
 
