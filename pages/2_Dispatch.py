@@ -1,6 +1,11 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from datetime import datetime
 from utils.header import show_header
 from utils.auth import check_login
@@ -88,12 +93,12 @@ else:
 
     if st.session_state.role == "Admin":
         csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="🗓️ Download Dispatched Orders (CSV)"
-            data=csv,
-            file_name=f"Dispatched_Orders_{datetime.now().date()}.csv",
-            mime="text/csv"
-        )
+    st.download_button(
+        label="🗓️ Download Dispatched Orders (CSV)",
+        data=csv,
+        file_name=f"Dispatched_Orders_{datetime.now().date()}.csv",
+        mime="text/csv"
+    )
 
 st.divider()
 if st.button("🔒 Logout"):
