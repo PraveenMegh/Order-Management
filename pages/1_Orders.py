@@ -1,132 +1,180 @@
 import streamlit as st
 import sqlite3
+import pandas as pd
+import os
+from datetime import datetime
 from utils.header import show_header
 from utils.auth import check_login
-from datetime import datetime
 
-# --- Page Access Control ---
+# --- Authentication ---
 check_login()
 if st.session_state.get("role") not in ["Admin", "Sales"]:
-    st.error("🚫 You do not have permission to access this page.")
+    st.error("⛔ You do not have permission to access this page.")
     st.stop()
 
-# --- Page Header ---
 show_header()
-st.header("📦 Place a New Order")
 
-# --- Database Connection ---
+st.write("Using database path:", os.path.abspath('data/orders.db'))
+
+# --- Connect to DB ---
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)
 c = conn.cursor()
 
-# --- Create Table if not exists ---
-c.execute('''
-    CREATE TABLE IF NOT EXISTS orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT,
-        customer_name TEXT,
-        product_name TEXT,
-        quantity INTEGER,
-        unit TEXT,
-        urgent BOOLEAN,
-        status TEXT DEFAULT 'Pending',
-        created_at TEXT,
-        dispatched_quantity INTEGER,
-        dispatched_at TEXT,
-        price REAL,
-        currency TEXT,
-        unit_type TEXT,
-        dispatched_by TEXT
-    )
-''')
-conn.commit()
+# --- Get current user ---
+username = st.session_state.get("username")
+role = st.session_state.get("role")
 
-# --- Insert Order Function ---
-def insert_order(username, customer_name, product_name, quantity, unit, urgent, price, currency, unit_type):
-    c.execute('''
-        INSERT INTO orders (username, customer_name, product_name, quantity, unit, urgent, created_at, price, currency, unit_type)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (username, customer_name, product_name, quantity, unit, urgent, datetime.now(), price, currency, unit_type))
-    conn.commit()
+# --- FORM FOR NEW ORDER ---
+with st.form("new_order_form"):
+    st.subheader("📝 Create New Order")
+    customer_name = st.text_input("Customer Name")
+    urgent = st.checkbox("Mark as Urgent")
+    currency = st.selectbox("Currency", ["INR", "USD", "EUR"])
+    
+    # Multi-product input
+    num_products = st.number_input("How many products?", min_value=1, max_value=10, value=1)
+    
+    product_inputs = []
+    for i in range(num_products):
+        st.markdown(f"### Product {i+1}")
+        product_name = st.text_input(f"Product Name {i+1}", key=f"pname_{i}")
+        ordered_qty = st.number_input(f"Quantity {i+1}", min_value=1, key=f"pqty_{i}")
+        unit = st.selectbox(f"Unit {i+1}", ["KG", "Nos"], key=f"unit_{i}")
+        price = st.number_input(f"Price {i+1}", min_value=0.0, key=f"price_{i}")
+        unit_type = st.text_input(f"Unit Type {i+1}", key=f"utype_{i}")
+        product_inputs.append((product_name, ordered_qty, unit, price, unit_type))
+    
+    submitted = st.form_submit_button("Create Order")
 
-# --- Fetch Orders Function ---
-def fetch_orders(username):
-    if st.session_state.role == "Admin":
-        c.execute('SELECT * FROM orders')
+    if submitted:
+        if customer_name and all(p[0] for p in product_inputs):  # ensure all product names filled
+            # Insert order
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO orders (customer_name, username, created_at, urgent, currency)
+                VALUES (?, ?, datetime('now'), ?, ?)
+            """, (customer_name, username, int(urgent), currency))
+            conn.commit()
+            order_id = cursor.lastrowid
+            
+            # Insert order_items
+            for p in product_inputs:
+                cursor.execute("""
+                    INSERT INTO order_items (order_id, product_name, ordered_qty, unit, price, unit_type, status)
+                    VALUES (?, ?, ?, ?, ?, ?, 'Pending')
+                """, (order_id, p[0], p[1], p[2], p[3], p[4]))
+            conn.commit()
+            
+            st.success(f"✅ Order {order_id} created with {len(product_inputs)} products!")
+            st.rerun()
+        else:
+            st.error("Please fill customer name and all product names.")
+
+# --- Query user’s pending orders (joined with order_items) ---
+orders_df = pd.read_sql_query("""
+    SELECT 
+        o.id AS order_id,
+        o.order_code,
+        o.customer_name,
+        o.username AS salesperson,
+        o.currency,
+        o.urgent,
+        o.created_at,
+        oi.id AS item_id,
+        oi.product_name,
+        oi.ordered_qty,
+        oi.unit,
+        oi.price,
+        oi.unit_type,
+        oi.status,
+        oi.dispatched_qty,
+        oi.dispatched_at,
+        oi.dispatched_by
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    WHERE o.username = ?
+    ORDER BY o.created_at ASC
+""", conn, params=(username,))
+
+# --- Format date columns ---
+if not orders_df.empty:
+    # Keep your existing datetime formatting
+    orders_df['created_at'] = pd.to_datetime(orders_df['created_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
+    orders_df['dispatched_at'] = pd.to_datetime(orders_df['dispatched_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
+
+    # ✅ NEW: Add editable pending orders section
+    pending_items = orders_df[orders_df['status'] == 'Pending'].copy()
+
+    if pending_items.empty:
+        st.info("✅ No editable pending orders.")
     else:
-        c.execute('SELECT * FROM orders WHERE username = ?', (username,))
-    return c.fetchall()
+        st.subheader("📋 Edit Pending Orders Before Dispatch")
 
-# --- Place New Order Form ---
-st.subheader("➕ New Order Entry")
-with st.container():
-    with st.form("order_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            customer_name = st.text_input("Customer Name")
-            product_name = st.text_input("Product Name")
-            quantity = st.number_input("Quantity", min_value=1)
-            unit = st.selectbox("Unit", ["KG", "Grams", "Nos", "Units"])
-        with col2:
-            urgent = st.checkbox("Mark as Urgent")
-            price = st.number_input("Price per unit", min_value=0.0)
-            currency = st.selectbox("Currency", ["INR", "USD"])
-            unit_type = st.selectbox("Unit Type", ["Per KG", "Per Gram", "Per Unit", "Per Nos"])
+        editable_df = pending_items[['item_id', 'product_name', 'ordered_qty', 'price', 'unit']].copy()
+        editable_df_display = editable_df.drop(columns=['item_id'])  # hide item_id in UI
 
-        submit = st.form_submit_button("Submit Order")
-        if submit:
-            insert_order(
-                st.session_state.username,
-                customer_name,
-                product_name,
-                quantity,
-                unit,
-                int(urgent),
-                price,
-                currency,
-                unit_type
-            )
-            st.success("✅ Order placed successfully!")
+        edited_df = st.data_editor(
+            editable_df_display,
+            column_config={
+                'ordered_qty': st.column_config.NumberColumn(min_value=1),
+                'price': st.column_config.NumberColumn(min_value=0.0),
+                'unit': st.column_config.SelectboxColumn(options=['KG', 'Nos'])
+            },
+            use_container_width=True
+        )
+
+        if st.button("💾 Save Changes"):
+            for idx, row in edited_df.iterrows():
+                item_id = editable_df.iloc[idx]['item_id']
+                c.execute("""
+                    UPDATE order_items
+                    SET ordered_qty = ?, price = ?, unit = ?
+                    WHERE id = ?
+                """, (row['ordered_qty'], row['price'], row['unit'], item_id))
+            conn.commit()
+            st.success("✅ Changes saved!")
             st.rerun()
 
-st.divider()
-
-# --- Show Orders Section ---
-st.subheader("📜 Your Orders (Editable Before Dispatch)")
-orders = fetch_orders(st.session_state.username)
-
-if orders:
-    for order in orders:
-        id, username, customer_name, product_name, quantity, unit, urgent, status, created_at, dispatched_quantity, dispatched_at, price, currency, unit_type, dispatched_by = order
-
-        with st.expander(f"Order #{id} - {product_name} ({quantity} {unit})"):
-            col1, col2 = st.columns(2)
-            with col1:
-                new_customer = st.text_input("Customer Name", value=customer_name, key=f"cust_{id}")
-                new_product = st.text_input("Product Name", value=product_name, key=f"prod_{id}")
-                new_qty = st.number_input("Quantity", value=quantity, min_value=1, key=f"qty_{id}")
-                unit_list = ["KG", "Grams", "Nos", "Units"]
-                default_index = unit_list.index(unit) if unit in unit_list else 0
-                new_unit = st.selectbox("Unit", unit_list, index=default_index, key=f"unit_{id}")
-            with col2:
-                new_urgent = st.checkbox("Urgent", value=bool(urgent), key=f"urg_{id}")
-                new_price = st.number_input("Price", value=price if price else 0.0, key=f"price_{id}")
-                new_currency = st.selectbox("Currency", ["INR", "USD"], index=0 if currency == "INR" else 1, key=f"currency_{id}")
-                new_unit_type = st.selectbox("Unit Type", ["Per KG", "Per Gram", "Per Unit", "Per Nos"], index=0, key=f"unit_type_{id}")
-
-            if st.button("Update Order", key=f"update_{id}"):
-                c.execute('''
-                    UPDATE orders
-                    SET customer_name = ?, product_name = ?, quantity = ?, unit = ?, urgent = ?, price = ?, currency = ?, unit_type = ?
-                    WHERE id = ?
-                ''', (new_customer, new_product, new_qty, new_unit, int(new_urgent), new_price, new_currency, new_unit_type, id))
-                conn.commit()
-                st.success(f"✅ Order #{id} updated successfully!")
-                st.rerun()
 else:
-    st.info("ℹ️ No orders placed yet.")
+    st.info("ℹ️ You have no orders yet.")
+
+# --- UI ---
+st.title("📜 Your Orders (Editable Before Dispatch)")
+st.markdown(" ")
+
+if orders_df.empty:
+    st.info("ℹ️ You have no pending or dispatched orders.")
+else:
+    grouped = orders_df.groupby('order_id')
+    
+    for order_id, order_items in grouped:
+        order_code = order_items['order_code'].iloc[0]
+        customer_name = order_items['customer_name'].iloc[0]
+        created_on = order_items['created_at'].iloc[0]
+        urgent = '🔥 Yes' if order_items['urgent'].iloc[0] else 'No'
+        currency = order_items['currency'].iloc[0]
+
+        with st.expander(f"Order {order_code} - {customer_name}"):
+            st.markdown(f"**Created On**: {created_on}")
+            st.markdown(f"**Salesperson**: {order_items['salesperson'].iloc[0]}")
+            st.markdown(f"**Currency**: {currency}")
+            st.markdown(f"**Urgent**: {urgent}")
+
+            for idx, row in order_items.iterrows():
+                st.markdown(f"### Product: {row['product_name']}")
+                st.markdown(f"- Ordered Qty: {row['ordered_qty']} {row['unit']}")
+                st.markdown(f"- Unit Price: {row['price']} {currency}")
+                st.markdown(f"- Unit Type: {row['unit_type']}")
+                st.markdown(f"- Status: {row['status']}")
+                if row['dispatched_qty']:
+                    st.markdown(f"- Dispatched Qty: {row['dispatched_qty']}")
+                    st.markdown(f"- Dispatched On: {row['dispatched_at']}")
+                    st.markdown(f"- Dispatched By: {row['dispatched_by']}")
+                else:
+                    st.markdown("✅ Pending dispatch.")
 
 st.divider()
+
 if st.button("🔒 Logout"):
     st.session_state.clear()
     st.switch_page("app.py")
-

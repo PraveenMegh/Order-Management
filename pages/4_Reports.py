@@ -19,6 +19,7 @@ if st.session_state.get("role") != "Admin":
     st.stop()
 
 # --- Database Connection ---
+st.write("Using database path:", os.path.abspath('data/orders.db'))
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)
 
 # --- Fetch Pending Products ---

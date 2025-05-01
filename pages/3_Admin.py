@@ -11,9 +11,7 @@ if st.session_state.get("role") != "Admin":
 
 # --- Page Header ---
 show_header()
-st.image("assets/logo.jpg", width=200)
-st.title("Shree Sai Industries - Admin Panel")
-st.markdown("---")
+st.subheader("Shree Sai Industries - Admin Panel")  # 👈 optional, keep if needed (but without logo)
 
 # --- Database Connection ---
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)

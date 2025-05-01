@@ -1,0 +1,14 @@
+CREATE TABLE order_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,          -- foreign key to orders.id
+    product_name TEXT NOT NULL,
+    ordered_qty INTEGER NOT NULL,
+    dispatched_qty INTEGER,             -- NULL initially, filled after dispatch
+    unit TEXT,                          -- e.g. KG, Nos
+    price REAL,                         -- price per unit
+    unit_type TEXT,                     -- e.g. Per KG, Per Nos
+    status TEXT DEFAULT 'Pending',      -- Pending or Dispatched
+    dispatched_at TEXT,                 -- timestamp of dispatch
+    dispatched_by TEXT,                 -- username of dispatcher
+    FOREIGN KEY (order_id) REFERENCES orders(id)
+);
