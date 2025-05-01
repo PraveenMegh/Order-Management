@@ -3,14 +3,14 @@ import sqlite3
 import pandas as pd
 import sys
 import os
+from datetime import datetime
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from datetime import datetime
 from utils.header import show_header
 from utils.auth import check_login
 
-# --- Authentication and Access Control ---
+# --- Authentication ---
 check_login()
 if st.session_state.get("role") not in ["Admin", "Dispatch"]:
     st.error("⛔ You do not have permission to access this page.")
@@ -25,50 +25,74 @@ st.markdown(" ")
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)
 c = conn.cursor()
 
-# --- Fetch Data ---
-pending_orders = pd.read_sql_query("SELECT * FROM orders WHERE status = 'Pending' ORDER BY created_at ASC", conn)
-dispatched_orders = pd.read_sql_query("SELECT * FROM orders WHERE status = 'Dispatched' ORDER BY dispatched_at DESC", conn)
+# --- Fetch Pending Products ---
+pending_products = pd.read_sql_query("""
+    SELECT oi.id, oi.order_id, o.customer_name, o.username as salesperson,
+           oi.product_name, oi.ordered_qty, oi.unit, oi.price, oi.unit_type,
+           o.currency, o.urgent, o.created_at
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    WHERE oi.status = 'Pending'
+    ORDER BY o.created_at ASC
+""", conn)
+
+# --- Fetch Dispatched Products ---
+dispatched_products = pd.read_sql_query("""
+    SELECT oi.id, oi.order_id, o.customer_name, o.username as salesperson,
+           oi.product_name, oi.ordered_qty, oi.dispatched_qty, oi.unit,
+           oi.price, oi.unit_type, o.currency, o.urgent,
+           o.created_at, oi.dispatched_at, oi.dispatched_by
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    WHERE oi.status = 'Dispatched'
+    ORDER BY oi.dispatched_at DESC
+""", conn)
 
 # --- Pending Orders Section ---
-st.caption("\u26a1\ufe0f Please dispatch orders in FIFO (First In, First Out) sequence. Oldest orders are shown first.")
+st.caption("⚡ Please dispatch orders in FIFO (First In, First Out) sequence. Oldest orders are shown first.")
 
-if pending_orders.empty:
-    st.success("✅ No pending orders for dispatch.")
+if pending_products.empty:
+    st.success("✅ No pending products for dispatch.")
 else:
-    st.subheader("📦 Pending Orders")
-    for idx, order in pending_orders.iterrows():
-        with st.expander(f"Order #{order['id']} - {order['product_name']} ({order['quantity']} {order['unit']})"):
-            st.markdown(f"**Customer**: {order['customer_name']}")
-            st.markdown(f"**Salesperson**: {order['username']}")
-            st.markdown(f"**Unit Price**: {order['price']} {order['currency']}")
-            st.markdown(f"**Unit Type**: {order['unit_type']}")
-            st.markdown(f"**Urgent**: {'🔥 Yes' if order['urgent'] else 'No'}")
-        try:
-            created_at = datetime.strptime(order['created_at'], '%Y-%m-%d %H:%M:%S.%f')
-            st.markdown(f"**Created On**: {created_at.strftime('%d-%m-%Y %I:%M %p')}")
-        except (KeyError, ValueError, TypeError):
-            st.markdown("**Created On**: Invalid or missing timestamp")
+    st.subheader("📦 Pending Products for Dispatch")
+    grouped = pending_products.groupby('order_id')
 
-            dispatch_qty = st.number_input(
-                "Dispatch Quantity",
-                min_value=0,
-                max_value=order['quantity'],
-                value=order['quantity'],
-                key=f"dispatch_qty_{order['id']}"
+    for order_id, order_df in grouped:
+        with st.expander(f"Order #{order_id} - {order_df['customer_name'].iloc[0]}"):
+            st.markdown(f"**Customer**: {order_df['customer_name'].iloc[0]}")
+            st.markdown(f"**Salesperson**: {order_df['salesperson'].iloc[0]}")
+            st.markdown(f"**Currency**: {order_df['currency'].iloc[0]}")
+            st.markdown(f"**Urgent**: {'🔥 Yes' if order_df['urgent'].iloc[0] else 'No'}")
+            try:
+                created_at = datetime.strptime(order_df['created_at'].iloc[0], '%Y-%m-%d %H:%M:%S.%f')
+                st.markdown(f"**Created On**: {created_at.strftime('%d-%m-%Y %I:%M %p')}")
+            except:
+                st.markdown("**Created On**: Invalid timestamp")
+
+            editable_df = order_df[['product_name', 'ordered_qty', 'unit']].copy()
+            editable_df['dispatched_qty'] = editable_df['ordered_qty']
+
+            editable_df = st.data_editor(
+                editable_df,
+                column_config={
+                    "product_name": st.column_config.TextColumn(disabled=True),
+                    "ordered_qty": st.column_config.NumberColumn(disabled=True),
+                    "unit": st.column_config.TextColumn(disabled=True),
+                    "dispatched_qty": st.column_config.NumberColumn(help="Edit dispatched qty if sending less than ordered")
+                },
+                use_container_width=True
             )
 
-            if st.button("Confirm Dispatch", key=f"confirm_dispatch_{order['id']}"):
+            if st.button(f"✅ Confirm Dispatch for Order #{order_id}"):
                 now = datetime.now()
-                c.execute('''
-                    UPDATE orders
-                    SET status = 'Dispatched',
-                        dispatched_quantity = ?,
-                        dispatched_at = ?,
-                        dispatched_by = ?
-                    WHERE id = ?
-                ''', (dispatch_qty, now, st.session_state.username, order['id']))
+                for _, row in editable_df.iterrows():
+                    c.execute("""
+                        UPDATE order_items
+                        SET dispatched_qty = ?, dispatched_at = ?, dispatched_by = ?, status = 'Dispatched'
+                        WHERE order_id = ? AND product_name = ?
+                    """, (row['dispatched_qty'], now, st.session_state.username, order_id, row['product_name']))
                 conn.commit()
-                st.success(f"✅ Order #{order['id']} dispatched successfully!")
+                st.success(f"✅ Order #{order_id} dispatched!")
                 st.rerun()
 
 st.divider()
@@ -76,10 +100,10 @@ st.divider()
 # --- Dispatched Orders Section ---
 st.subheader("✅ Dispatched Orders")
 
-if dispatched_orders.empty:
+if dispatched_products.empty:
     st.info("ℹ️ No dispatched orders yet.")
 else:
-    df = dispatched_orders.copy()
+    df = dispatched_products.copy()
     if 'created_at' in df.columns:
         df['created_at'] = pd.to_datetime(df['created_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
     if 'dispatched_at' in df.columns:
@@ -103,7 +127,7 @@ else:
         st.info("Download available only for Admin.")
 
 st.divider()
+
 if st.button("🔒 Logout"):
     st.session_state.clear()
     st.switch_page("app.py")
-

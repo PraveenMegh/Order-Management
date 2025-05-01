@@ -1,6 +1,11 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from utils.header import show_header
 from utils.auth import check_login
 
@@ -15,64 +20,67 @@ if st.session_state.get("role") != "Admin":
 
 # --- Database Connection ---
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)
-c = conn.cursor()
 
-# --- User Info ---
-username = st.session_state.get("username")
-role = st.session_state.get("role")
+# --- Fetch Pending Products ---
+pending_products = pd.read_sql_query("""
+    SELECT oi.order_id, o.customer_name, oi.product_name, oi.ordered_qty, oi.unit, oi.price, oi.unit_type,
+           o.currency, o.urgent, o.created_at
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    WHERE oi.status = 'Pending'
+""", conn)
 
-# --- Fetch Data ---
-if role in ["Admin", "Dispatch"]:
-    pending_orders = pd.read_sql_query("SELECT * FROM orders WHERE status = 'Pending'", conn)
-    dispatched_orders = pd.read_sql_query("SELECT * FROM orders WHERE status = 'Dispatched'", conn)
-else:
-    pending_orders = pd.read_sql_query("SELECT * FROM orders WHERE status = 'Pending' AND username = ?", conn, params=(username,))
-    dispatched_orders = pd.read_sql_query("SELECT * FROM orders WHERE status = 'Dispatched' AND username = ?", conn, params=(username,))
+# --- Fetch Dispatched Products ---
+dispatched_products = pd.read_sql_query("""
+    SELECT oi.order_id, o.customer_name, oi.product_name, oi.ordered_qty, oi.dispatched_qty, oi.unit,
+           oi.price, oi.unit_type, o.currency, o.urgent, o.created_at, oi.dispatched_at, oi.dispatched_by
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    WHERE oi.status = 'Dispatched'
+""", conn)
 
 # --- Format Dates ---
-if not pending_orders.empty:
-    pending_orders['created_at'] = pd.to_datetime(pending_orders['created_at']).dt.strftime('%d-%m-%Y %I:%M %p')
+if not pending_products.empty:
+    pending_products['created_at'] = pd.to_datetime(pending_products['created_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
 
-if not dispatched_orders.empty:
-    dispatched_orders['created_at'] = pd.to_datetime(dispatched_orders['created_at']).dt.strftime('%d-%m-%Y %I:%M %p')
-    dispatched_orders['dispatched_at'] = pd.to_datetime(dispatched_orders['dispatched_at']).dt.strftime('%d-%m-%Y %I:%M %p')
+if not dispatched_products.empty:
+    dispatched_products['created_at'] = pd.to_datetime(dispatched_products['created_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
+    dispatched_products['dispatched_at'] = pd.to_datetime(dispatched_products['dispatched_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
+    dispatched_products['shortfall'] = dispatched_products['ordered_qty'] - dispatched_products['dispatched_qty']
 
 # --- UI ---
 st.title("📊 Order Reports")
 st.markdown(" ")
 
 # --- Pending Orders Section ---
+st.subheader("📦 Pending Products")
 
-st.subheader("📦 Pending Orders")
-st.markdown(" ")
-
-if pending_orders.empty:
-    st.success("✅ No pending orders!")
+if pending_products.empty:
+    st.success("✅ No pending products!")
 else:
-    # Highlight urgent
     def highlight_urgent(val):
         return 'background-color: #FFD1D1' if val == 1 else ''
 
-    st.dataframe(pending_orders.style.applymap(highlight_urgent, subset=["urgent"]), use_container_width=True)
+    st.dataframe(
+        pending_products.style.applymap(highlight_urgent, subset=["urgent"]),
+        use_container_width=True
+    )
 
 # --- Divider ---
 st.divider()
 
 # --- Dispatched Orders Section ---
+st.subheader("✅ Dispatched Products")
 
-st.subheader("✅ Dispatched Orders")
-st.markdown(" ")
-
-if dispatched_orders.empty:
-    st.info("ℹ️ No dispatched orders yet.")
+if dispatched_products.empty:
+    st.info("ℹ️ No dispatched products yet.")
 else:
-    st.dataframe(dispatched_orders, use_container_width=True)
+    st.dataframe(dispatched_products, use_container_width=True)
 
-    if role == "Admin":
-        csv = dispatched_orders.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Download Dispatched Orders (CSV)",
-            data=csv,
-            file_name="dispatched_orders.csv",
-            mime="text/csv"
-        )
+    csv = dispatched_products.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Download Dispatched Products (CSV)",
+        data=csv,
+        file_name="dispatched_products.csv",
+        mime="text/csv"
+    )
