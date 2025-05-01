@@ -93,12 +93,14 @@ else:
 
     if st.session_state.role == "Admin":
         csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="🗓️ Download Dispatched Orders (CSV)",
-        data=csv,
-        file_name=f"Dispatched_Orders_{datetime.now().date()}.csv",
-        mime="text/csv"
-    )
+        st.download_button(
+            label="Download CSV",
+            data=csv,
+            file_name="Dispatched_Orders.csv",
+            mime="text/csv"
+        )
+    elif st.session_state.role == "Dispatch":
+        st.info("Download available only for Admin.")
 
 st.divider()
 if st.button("🔒 Logout"):
