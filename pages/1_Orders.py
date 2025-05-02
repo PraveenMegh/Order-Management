@@ -105,6 +105,8 @@ if not orders_df.empty:
         st.subheader("📋 Edit Pending Orders Before Dispatch")
 
         editable_df = pending_items[['item_id', 'product_name', 'ordered_qty', 'price', 'unit']].set_index('item_id')
+        
+        st.write("editable_df index:", list(editable_df.index))
 
         edited_df = st.data_editor(
             editable_df,
