@@ -104,10 +104,8 @@ if not orders_df.empty:
     else:
         st.subheader("📋 Edit Pending Orders Before Dispatch")
 
-        # Prepare editable dataframe with item_id as index
         editable_df = pending_items[['item_id', 'product_name', 'ordered_qty', 'price', 'unit']].set_index('item_id')
 
-        # Show editor
         edited_df = st.data_editor(
             editable_df,
             column_config={
@@ -120,12 +118,8 @@ if not orders_df.empty:
             hide_index=True
         )
 
-        # ✅ Reset index to bring back item_id as a column
-        edited_df_reset = edited_df.reset_index()
-
         if st.button("💾 Save Changes"):
-            for _, row in edited_df_reset.iterrows():
-                item_id = row['item_id']
+            for item_id, row in edited_df.iterrows():
                 updated_qty = row['ordered_qty']
                 updated_price = row['price']
                 updated_unit = row['unit']
@@ -138,7 +132,8 @@ if not orders_df.empty:
             conn.commit()
             st.success("✅ Changes saved!")
             st.rerun()
-    else:
+
+else:
     st.info("ℹ️ You have no orders yet.")
 
 # --- Orders Summary View ---
@@ -163,7 +158,7 @@ else:
             st.markdown(f"**Currency**: {currency}")
             st.markdown(f"**Urgent**: {urgent}")
 
-            for idx, row in order_items.iterrows():
+            for _, row in order_items.iterrows():
                 st.markdown(f"### Product: {row['product_name']}")
                 st.markdown(f"- Ordered Qty: {row['ordered_qty']} {row['unit']}")
                 st.markdown(f"- Unit Price: {row['price']} {currency}")
@@ -181,3 +176,166 @@ st.divider()
 if st.button("🔒 Logout"):
     st.session_state.clear()
     st.switch_page("app.py")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
