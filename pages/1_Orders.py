@@ -104,8 +104,10 @@ if not orders_df.empty:
     else:
         st.subheader("📋 Edit Pending Orders Before Dispatch")
 
+        # Prepare editable dataframe with item_id as index
         editable_df = pending_items[['item_id', 'product_name', 'ordered_qty', 'price', 'unit']].set_index('item_id')
 
+        # Show editor
         edited_df = st.data_editor(
             editable_df,
             column_config={
@@ -118,8 +120,12 @@ if not orders_df.empty:
             hide_index=True
         )
 
+        # ✅ Reset index to bring back item_id as a column
+        edited_df_reset = edited_df.reset_index()
+
         if st.button("💾 Save Changes"):
-            for item_id, row in edited_df.iterrows():
+            for _, row in edited_df_reset.iterrows():
+                item_id = row['item_id']
                 updated_qty = row['ordered_qty']
                 updated_price = row['price']
                 updated_unit = row['unit']
@@ -132,8 +138,7 @@ if not orders_df.empty:
             conn.commit()
             st.success("✅ Changes saved!")
             st.rerun()
-
-else:
+    else:
     st.info("ℹ️ You have no orders yet.")
 
 # --- Orders Summary View ---
