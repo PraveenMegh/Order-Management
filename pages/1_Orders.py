@@ -31,7 +31,6 @@ with st.form("new_order_form"):
     urgent = st.checkbox("Mark as Urgent")
     currency = st.selectbox("Currency", ["INR", "USD", "EUR"])
     
-    # Multi-product input
     num_products = st.number_input("How many products?", min_value=1, max_value=10, value=1)
     
     product_inputs = []
@@ -47,19 +46,16 @@ with st.form("new_order_form"):
     submitted = st.form_submit_button("Create Order")
 
     if submitted:
-        if customer_name and all(p[0] for p in product_inputs):  # ensure all product names filled
-            # Insert order
-            cursor = conn.cursor()
-            cursor.execute("""
+        if customer_name and all(p[0] for p in product_inputs):
+            c.execute("""
                 INSERT INTO orders (customer_name, username, created_at, urgent, currency)
                 VALUES (?, ?, datetime('now'), ?, ?)
             """, (customer_name, username, int(urgent), currency))
             conn.commit()
-            order_id = cursor.lastrowid
+            order_id = c.lastrowid
             
-            # Insert order_items
             for p in product_inputs:
-                cursor.execute("""
+                c.execute("""
                     INSERT INTO order_items (order_id, product_name, ordered_qty, unit, price, unit_type, status)
                     VALUES (?, ?, ?, ?, ?, ?, 'Pending')
                 """, (order_id, p[0], p[1], p[2], p[3], p[4]))
@@ -70,7 +66,7 @@ with st.form("new_order_form"):
         else:
             st.error("Please fill customer name and all product names.")
 
-# --- Query user’s pending orders (joined with order_items) ---
+# --- Query user’s pending orders ---
 orders_df = pd.read_sql_query("""
     SELECT 
         o.id AS order_id,
@@ -96,13 +92,11 @@ orders_df = pd.read_sql_query("""
     ORDER BY o.created_at ASC
 """, conn, params=(username,))
 
-# --- Format date columns ---
+# --- Format dates ---
 if not orders_df.empty:
-    # Keep your existing datetime formatting
     orders_df['created_at'] = pd.to_datetime(orders_df['created_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
     orders_df['dispatched_at'] = pd.to_datetime(orders_df['dispatched_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
 
-    # ✅ NEW: Add editable pending orders section
     pending_items = orders_df[orders_df['status'] == 'Pending'].copy()
 
     if pending_items.empty:
@@ -110,27 +104,31 @@ if not orders_df.empty:
     else:
         st.subheader("📋 Edit Pending Orders Before Dispatch")
 
-        editable_df = pending_items[['item_id', 'product_name', 'ordered_qty', 'price', 'unit']].copy()
-        editable_df_display = editable_df.drop(columns=['item_id'])  # hide item_id in UI
+        editable_df = pending_items[['item_id', 'product_name', 'ordered_qty', 'price', 'unit']].set_index('item_id')
 
         edited_df = st.data_editor(
-            editable_df_display,
+            editable_df,
             column_config={
+                'product_name': st.column_config.TextColumn(disabled=True),
                 'ordered_qty': st.column_config.NumberColumn(min_value=1),
                 'price': st.column_config.NumberColumn(min_value=0.0),
                 'unit': st.column_config.SelectboxColumn(options=['KG', 'Nos'])
             },
-            use_container_width=True
+            use_container_width=True,
+            hide_index=True
         )
 
         if st.button("💾 Save Changes"):
-            for idx, row in edited_df.iterrows():
-                item_id = editable_df.iloc[idx]['item_id']
+            for item_id, row in edited_df.iterrows():
+                updated_qty = row['ordered_qty']
+                updated_price = row['price']
+                updated_unit = row['unit']
+
                 c.execute("""
                     UPDATE order_items
                     SET ordered_qty = ?, price = ?, unit = ?
                     WHERE id = ?
-                """, (row['ordered_qty'], row['price'], row['unit'], item_id))
+                """, (updated_qty, updated_price, updated_unit, item_id))
             conn.commit()
             st.success("✅ Changes saved!")
             st.rerun()
@@ -138,7 +136,7 @@ if not orders_df.empty:
 else:
     st.info("ℹ️ You have no orders yet.")
 
-# --- UI ---
+# --- Orders Summary View ---
 st.title("📜 Your Orders (Editable Before Dispatch)")
 st.markdown(" ")
 
@@ -146,7 +144,7 @@ if orders_df.empty:
     st.info("ℹ️ You have no pending or dispatched orders.")
 else:
     grouped = orders_df.groupby('order_id')
-    
+
     for order_id, order_items in grouped:
         order_code = order_items['order_code'].iloc[0]
         customer_name = order_items['customer_name'].iloc[0]
