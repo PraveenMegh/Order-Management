@@ -51,10 +51,6 @@ try:
     if cur.fetchone()[0] > 0:
         print(f"❌ Today ({today_str}) is a holiday. No dispatch report sent.")
         sys.exit(0)
-    
-    if not dispatched_orders:
-        print(f"✅ No dispatched orders to report for {', '.join(report_dates)}.")
-        sys.exit(0)
 
     # --- Determine report dates ---
     if weekday == 6:  # Sunday
@@ -91,37 +87,62 @@ try:
     cur.execute(query)
     dispatched_orders = cur.fetchall()
 
-    if dispatched_orders:
-        # --- Generate PDF ---
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", "B", 14)
-        pdf.cell(0, 10, f"Dispatch Summary ({', '.join(report_dates)})", ln=True)
-        pdf.ln(5)
+    # --- If no dispatched orders, send plain email ---
+    if not dispatched_orders:
+        print(f"✅ No dispatched orders to report for {', '.join(report_dates)}.")
+        
+        subject = f"Dispatch Summary - {', '.join(report_dates)}"
+        body = f"""
+Dear Team,
 
-        headers = ["#", "Customer", "Product", "Ordered Qty", "Unit", "Dispatched Qty", "By"]
-        col_widths = [10, 30, 40, 25, 20, 25, 40]
+No dispatch orders were found for {', '.join(report_dates)}.
 
-        pdf.set_font("Arial", size=10)
-        for i, header in enumerate(headers):
-            pdf.cell(col_widths[i], 10, header, border=1)
+This is an automated daily report.
+
+Regards,
+Shree Sai Industries
+"""
+        msg = MIMEMultipart()
+        msg['From'] = EMAIL_USER
+        msg['To'] = TO_EMAIL
+        msg['Bcc'] = BCC_EMAIL
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(EMAIL_USER, EMAIL_PASSWORD)
+            server.send_message(msg)
+
+        print("✅ Dispatch summary email (no data) sent successfully.")
+        sys.exit(0)
+
+    # --- Generate PDF Report ---
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, f"Dispatch Summary ({', '.join(report_dates)})", ln=True)
+    pdf.ln(5)
+
+    headers = ["#", "Customer", "Product", "Ordered Qty", "Unit", "Dispatched Qty", "By"]
+    col_widths = [10, 30, 40, 25, 20, 25, 40]
+
+    pdf.set_font("Arial", size=10)
+    for i, header in enumerate(headers):
+        pdf.cell(col_widths[i], 10, header, border=1)
+    pdf.ln()
+
+    for idx, row in enumerate(dispatched_orders, start=1):
+        customer, product, ordered_qty, unit, dispatched_qty, dispatched_at, dispatched_by = row
+        values = [str(idx), customer, product, str(ordered_qty), unit, str(dispatched_qty), dispatched_by]
+        for i, val in enumerate(values):
+            pdf.cell(col_widths[i], 10, str(val), border=1)
         pdf.ln()
 
-        for idx, row in enumerate(dispatched_orders, start=1):
-            customer, product, ordered_qty, unit, dispatched_qty, dispatched_at, dispatched_by = row
-            values = [str(idx), customer, product, str(ordered_qty), unit, str(dispatched_qty), dispatched_by]
-            for i, val in enumerate(values):
-                pdf.cell(col_widths[i], 10, str(val), border=1)
-            pdf.ln()
+    pdf_filename = f"dispatch_summary_{today_str}.pdf"
+    pdf.output(pdf_filename)
 
-        pdf_filename = f"dispatch_summary_{today_str}.pdf"
-        pdf.output(pdf_filename)
-        attach_pdf = True
-    else:
-        print("✅ No dispatched orders found today.")
-        attach_pdf = False
-
-    # --- Email Composition ---
+    # --- Compose Email with Attachment ---
     subject = f"Dispatch Summary - {', '.join(report_dates)}"
     body = f"""
 Dear Team,
@@ -143,18 +164,15 @@ Shree Sai Industries
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
-    if os.path.exists(report_file):
-        print(f"✅ Report file exists: {report_file}")
-        send_email_with_attachment(report_file)
-    else:
-        print(f"❌ Report file not found: {report_file}")
-        send_email_no_attachment("Dispatch Report - File Missing")
-
-    if attach_pdf:
+    if os.path.exists(pdf_filename):
         with open(pdf_filename, 'rb') as file:
             part = MIMEApplication(file.read(), Name=pdf_filename)
             part['Content-Disposition'] = f'attachment; filename="{pdf_filename}"'
             msg.attach(part)
+        print(f"✅ Attached PDF: {pdf_filename}")
+    else:
+        print(f"❌ PDF file not found: {pdf_filename}")
+        sys.exit(1)
 
     # --- Send Email ---
     with smtplib.SMTP('smtp.gmail.com', 587) as server:
@@ -163,11 +181,11 @@ Shree Sai Industries
         server.send_message(msg)
 
     print("✅ Dispatch summary email sent successfully.")
-    sys.exit(0)  # ✅ Success exit code
+    sys.exit(0)
 
 except Exception as e:
     print(f"❌ Dispatch Report Failed: {e}")
-    sys.exit(1)  # ❌ Failure exit code
+    sys.exit(1)
 
 finally:
     try:
