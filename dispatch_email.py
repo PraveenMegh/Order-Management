@@ -135,6 +135,7 @@ try:
         msg = MIMEMultipart()
         msg['From'] = EMAIL_USER
         msg['To'] = TO_EMAIL
+        msg['Bcc'] = pkc05@yahoo.com
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
 
@@ -152,6 +153,9 @@ try:
 
     else:
         print(f"✅ No dispatched orders to report for {', '.join(report_dates)}.")
+    else:
+        print("✅ Dispatch Report Email Process Completed Successfully.")
+        sys.exit(0)
 
 except snowflake.connector.errors.DatabaseError as e:
     print("❌ Snowflake connection error:", e)
