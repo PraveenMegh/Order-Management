@@ -26,13 +26,14 @@ SNOWFLAKE_DATABASE = os.getenv("SNOWFLAKE_DATABASE")
 SNOWFLAKE_SCHEMA = os.getenv("SNOWFLAKE_SCHEMA")
 SNOWFLAKE_ROLE = os.getenv("SNOWFLAKE_ROLE")
 
-# --- Time Handling ---
+# --- Timezone Handling ---
 ist = pytz.timezone('Asia/Kolkata')
 now_ist = datetime.now(ist)
 today_str = now_ist.strftime('%Y-%m-%d')
 weekday = now_ist.weekday()
 
 try:
+    # --- Connect to Snowflake ---
     conn = snowflake.connector.connect(
         user=SNOWFLAKE_USER,
         password=SNOWFLAKE_PASSWORD,
@@ -51,7 +52,7 @@ try:
         print(f"❌ Today ({today_str}) is a holiday. No dispatch report sent.")
         sys.exit(0)
 
-    # --- Dates to include ---
+    # --- Determine report dates ---
     if weekday == 6:  # Sunday
         report_dates = [(now_ist - timedelta(days=1)).strftime('%Y-%m-%d')]
     elif weekday == 0:  # Monday
@@ -63,7 +64,7 @@ try:
         report_dates = [today_str]
 
     report_dates_sql = "', '".join(report_dates)
-    print(f"📊 Generating dispatch report for: {report_dates_sql}")
+    print(f"📊 Fetching dispatched orders for: {report_dates_sql}")
 
     # --- Fetch Dispatched Orders ---
     query = f"""
@@ -87,7 +88,7 @@ try:
     dispatched_orders = cur.fetchall()
 
     if dispatched_orders:
-        # --- Generate PDF Report ---
+        # --- Generate PDF ---
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", "B", 14)
@@ -109,13 +110,14 @@ try:
                 pdf.cell(col_widths[i], 10, str(val), border=1)
             pdf.ln()
 
-        # --- Save PDF ---
         pdf_filename = f"dispatch_summary_{today_str}.pdf"
         pdf.output(pdf_filename)
+        attach_pdf = True
     else:
-        print("✅ No dispatches today. Sending info email.")
+        print("✅ No dispatched orders found today.")
+        attach_pdf = False
 
-    # --- Compose Email ---
+    # --- Email Composition ---
     subject = f"Dispatch Summary - {', '.join(report_dates)}"
     body = f"""
 Dear Team,
@@ -137,8 +139,7 @@ Shree Sai Industries
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
-    # --- Attach PDF only if exists ---
-    if dispatched_orders:
+    if attach_pdf:
         with open(pdf_filename, 'rb') as file:
             part = MIMEApplication(file.read(), Name=pdf_filename)
             part['Content-Disposition'] = f'attachment; filename="{pdf_filename}"'
@@ -150,15 +151,12 @@ Shree Sai Industries
         server.login(EMAIL_USER, EMAIL_PASSWORD)
         server.send_message(msg)
 
-    print("✅ Dispatch report email sent successfully.")
-
-    # After email sent successfully:
-    print("✅ Dispatch summary email sent!")
-    sys.exit(0)  # ✅ Explicitly tell GitHub Actions → SUCCESS exit
+    print("✅ Dispatch summary email sent successfully.")
+    sys.exit(0)  # ✅ Success exit code
 
 except Exception as e:
     print(f"❌ Dispatch Report Failed: {e}")
-    sys.exit(1)
+    sys.exit(1)  # ❌ Failure exit code
 
 finally:
     try:
@@ -166,5 +164,3 @@ finally:
         conn.close()
     except:
         pass
-
-sys.exit(0)
