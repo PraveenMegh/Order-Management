@@ -152,6 +152,10 @@ Shree Sai Industries
 
     print("✅ Dispatch report email sent successfully.")
 
+    # After email sent successfully:
+    print("✅ Dispatch summary email sent!")
+    sys.exit(0)  # ✅ Explicitly tell GitHub Actions → SUCCESS exit
+
 except Exception as e:
     print(f"❌ Dispatch Report Failed: {e}")
     sys.exit(1)
