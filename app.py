@@ -23,6 +23,16 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+    <style>
+    @media (max-width: 768px) {
+        .stDataFrameContainer { overflow-x: auto !important; }
+        .block-container { padding: 0.5rem 1rem; }
+        h1, h2, h3 { font-size: 20px !important; }
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- Title ---
 st.markdown("<h2>🔒 Please Login</h2>", unsafe_allow_html=True)
 

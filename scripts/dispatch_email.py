@@ -115,18 +115,22 @@ try:
 
         # --- Send Email ---
         subject = f"Dispatch Summary - {', '.join(report_dates)}"
-        body = f"""
+       body = f"""
         Dear Team,
 
-        Please find attached the dispatch summary for {', '.join(report_dates)}.
+       📦 Please find attached the **Dispatch Summary Report** for {', '.join(report_dates)}.
 
-        - Urgent orders prioritized.
-        - FIFO used for others.
-        - Automated Daily Report.
+        🔑 **Key Highlights**:
+        - Urgent orders (if any) were dispatched on priority.
+        - Regular dispatches followed the FIFO (First-In-First-Out) basis.
+        - This is an automated daily report from the Shree Sai Industries order management system.
 
-        Regards,
-        Shree Sai Industries
-        """
+        ✅ Kindly ensure all pending orders are addressed as per the dispatch schedule.
+
+        Thank you,  
+        **Shree Sai Industries**
+    """
+
 
         msg = MIMEMultipart()
         msg['From'] = EMAIL_USER
