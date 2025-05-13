@@ -51,6 +51,10 @@ try:
     if cur.fetchone()[0] > 0:
         print(f"❌ Today ({today_str}) is a holiday. No dispatch report sent.")
         sys.exit(0)
+    
+    if not dispatched_orders:
+        print(f"✅ No dispatched orders to report for {', '.join(report_dates)}.")
+        sys.exit(0)
 
     # --- Determine report dates ---
     if weekday == 6:  # Sunday
@@ -138,6 +142,13 @@ Shree Sai Industries
     msg['Bcc'] = BCC_EMAIL
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain', 'utf-8'))
+
+    if os.path.exists(report_file):
+        print(f"✅ Report file exists: {report_file}")
+        send_email_with_attachment(report_file)
+    else:
+        print(f"❌ Report file not found: {report_file}")
+        send_email_no_attachment("Dispatch Report - File Missing")
 
     if attach_pdf:
         with open(pdf_filename, 'rb') as file:
