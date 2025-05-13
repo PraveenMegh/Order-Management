@@ -1,9 +1,23 @@
 import streamlit as st
-import sqlite3
+import snowflake.connector
+from dotenv import load_dotenv
+import os
 import pandas as pd
 import sys
-import os
 from datetime import datetime
+
+# ✅ Load .env file
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(dotenv_path=env_path)
+
+# ✅ Debug prints
+print("SNOWFLAKE_ACCOUNT =", os.environ.get('SNOWFLAKE_ACCOUNT'))
+print("SNOWFLAKE_USER =", os.environ.get('SNOWFLAKE_USER'))
+print("SNOWFLAKE_PASSWORD =", os.environ.get('SNOWFLAKE_PASSWORD'))
+print("SNOWFLAKE_WAREHOUSE =", os.environ.get('SNOWFLAKE_WAREHOUSE'))
+print("SNOWFLAKE_DATABASE =", os.environ.get('SNOWFLAKE_DATABASE'))
+print("SNOWFLAKE_SCHEMA =", os.environ.get('SNOWFLAKE_SCHEMA'))
+print("SNOWFLAKE_ROLE =", os.environ.get('SNOWFLAKE_ROLE'))
 
 # --- Path Setup ---
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -17,19 +31,29 @@ if st.session_state.get("role") not in ["Admin", "Dispatch"]:
     st.error("⛔ You do not have permission to access this page.")
     st.stop()
 
+# ✅ Connect using env vars (after authentication)
+try:
+    conn = snowflake.connector.connect(
+        user=os.environ.get('SNOWFLAKE_USER'),
+        password=os.environ.get('SNOWFLAKE_PASSWORD'),
+        account=os.environ.get('SNOWFLAKE_ACCOUNT'),
+        warehouse=os.environ.get('SNOWFLAKE_WAREHOUSE'),
+        database=os.environ.get('SNOWFLAKE_DATABASE'),
+        schema=os.environ.get('SNOWFLAKE_SCHEMA'),
+        role=os.environ.get('SNOWFLAKE_ROLE')
+    )
+    c = conn.cursor()
+except Exception as e:
+    st.error(f"❌ Failed to connect to Snowflake: {e}")
+    st.stop()
+
 # --- Page Header ---
 show_header()
 st.header("🚚 Dispatch Orders")
 st.markdown(" ")
 
-# --- Database Connection ---
-db_path = os.path.abspath('data/orders.db')
-st.write("Using database path:", db_path)
-conn = sqlite3.connect(db_path, check_same_thread=False)
-c = conn.cursor()
-
 # --- Fetch Pending Products ---
-pending_products = pd.read_sql_query("""
+sql_query = """
     SELECT 
         oi.id AS item_id,
         oi.order_id,
@@ -49,10 +73,12 @@ pending_products = pd.read_sql_query("""
     JOIN orders o ON oi.order_id = o.id
     WHERE oi.status = 'Pending'
     ORDER BY o.created_at ASC
-""", conn)
+"""
+c.execute(sql_query)
+pending_products = pd.DataFrame(c.fetchall(), columns=[col[0] for col in c.description])
 
 # --- Fetch Dispatched Products ---
-dispatched_products = pd.read_sql_query("""
+dispatched_query = """
     SELECT
         oi.id AS item_id,
         oi.order_id,
@@ -75,7 +101,9 @@ dispatched_products = pd.read_sql_query("""
     JOIN orders o ON oi.order_id = o.id
     WHERE oi.status = 'Dispatched'
     ORDER BY oi.dispatched_at DESC
-""", conn)
+"""
+c.execute(dispatched_query)
+dispatched_products = pd.DataFrame(c.fetchall(), columns=[col[0] for col in c.description])
 
 # --- Pending Orders Section ---
 st.caption("⚡ Please dispatch orders in FIFO (First In, First Out) sequence. Oldest orders are shown first.")
@@ -93,12 +121,11 @@ else:
             st.markdown(f"**Currency**: {order_df['currency'].iloc[0]}")
             st.markdown(f"**Urgent**: {'🔥 Yes' if order_df['urgent'].iloc[0] else 'No'}")
             try:
-                created_at = datetime.strptime(order_df['created_at'].iloc[0], '%Y-%m-%d %H:%M:%S.%f')
+                created_at = pd.to_datetime(order_df['created_at'].iloc[0])
                 st.markdown(f"**Created On**: {created_at.strftime('%d-%m-%Y %I:%M %p')}")
             except:
                 st.markdown("**Created On**: Invalid timestamp")
 
-            # ✅ include item_id in editable_df so we can reference it later
             editable_df = order_df[['item_id', 'product_name', 'ordered_qty', 'unit']].copy()
             editable_df['dispatched_qty'] = editable_df['ordered_qty']
 
@@ -124,11 +151,7 @@ else:
                     dispatched_qty = row['dispatched_qty']
                     st.write(f"DEBUG: Updating item_id={item_id}, dispatched_qty={dispatched_qty}")
 
-                    c.execute("""
-                        UPDATE order_items
-                        SET dispatched_qty = ?, dispatched_at = ?, dispatched_by = ?, status = 'Dispatched'
-                        WHERE id = ?
-                    """, (dispatched_qty, now, dispatcher_name, item_id))
+                    c.execute("CALL dispatch_order(%s, %s, %s, %s)", (item_id, dispatched_qty, dispatcher_name, now))
 
                 conn.commit()
                 st.success(f"✅ Order #{order_id} dispatched!")
@@ -165,6 +188,9 @@ else:
         st.info("Download available only for Admin.")
 
 st.divider()
+
+c.close()
+conn.close()
 
 if st.button("🔒 Logout"):
     st.session_state.clear()

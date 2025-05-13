@@ -1,9 +1,12 @@
 import streamlit as st
 import sqlite3
 import bcrypt
+import os
 
 # Connect to database
-conn = sqlite3.connect('data/orders.db', check_same_thread=False)
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'data', 'orders.db')
+conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 c = conn.cursor()
 
 def login(username, password):

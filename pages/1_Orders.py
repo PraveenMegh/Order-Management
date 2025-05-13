@@ -6,6 +6,8 @@ from datetime import datetime
 from utils.header import show_header
 from utils.auth import check_login
 
+st.error("🟢 THIS IS THE NEW CODE RUNNING!")
+
 # --- Authentication ---
 check_login()
 if st.session_state.get("role") not in ["Admin", "Sales"]:
@@ -66,7 +68,7 @@ with st.form("new_order_form"):
         else:
             st.error("Please fill customer name and all product names.")
 
-# --- Query user’s pending orders ---
+# --- Query user’s orders (view-only summary) ---
 orders_df = pd.read_sql_query("""
     SELECT 
         o.id AS order_id,
@@ -97,50 +99,8 @@ if not orders_df.empty:
     orders_df['created_at'] = pd.to_datetime(orders_df['created_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
     orders_df['dispatched_at'] = pd.to_datetime(orders_df['dispatched_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
 
-    pending_items = orders_df[orders_df['status'] == 'Pending'].copy()
-
-    if pending_items.empty:
-        st.info("✅ No editable pending orders.")
-    else:
-        st.subheader("📋 Edit Pending Orders Before Dispatch")
-
-        editable_df = pending_items[['item_id', 'product_name', 'ordered_qty', 'price', 'unit']].set_index('item_id')
-        
-        st.write("editable_df index:", list(editable_df.index))
-
-        edited_df = st.data_editor(
-            editable_df,
-            column_config={
-                'product_name': st.column_config.TextColumn(disabled=True),
-                'ordered_qty': st.column_config.NumberColumn(min_value=1),
-                'price': st.column_config.NumberColumn(min_value=0.0),
-                'unit': st.column_config.SelectboxColumn(options=['KG', 'Nos'])
-            },
-            use_container_width=True,
-            hide_index=True
-        )
-
-        if st.button("💾 Save Changes"):
-            for item_id, row in edited_df.iterrows():
-                updated_qty = row['ordered_qty']
-                updated_price = row['price']
-                updated_unit = row['unit']
-
-                c.execute("""
-                    UPDATE order_items
-                    SET ordered_qty = ?, price = ?, unit = ?
-                    WHERE id = ?
-                """, (updated_qty, updated_price, updated_unit, item_id))
-            conn.commit()
-            st.success("✅ Changes saved!")
-            st.rerun()
-
-else:
-    st.info("ℹ️ You have no orders yet.")
-
-# --- Orders Summary View ---
-st.title("📜 Your Orders (Editable Before Dispatch)")
-st.markdown(" ")
+# --- Orders Summary View (VIEW-ONLY, NO EDITING) ---
+st.title("📜 Your Orders")
 
 if orders_df.empty:
     st.info("ℹ️ You have no pending or dispatched orders.")
@@ -178,166 +138,3 @@ st.divider()
 if st.button("🔒 Logout"):
     st.session_state.clear()
     st.switch_page("app.py")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
