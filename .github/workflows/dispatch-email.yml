@@ -33,6 +33,4 @@ jobs:
         SNOWFLAKE_DATABASE: ORDERS_DB
         SNOWFLAKE_SCHEMA: ORDERS_SCHEMA
         SNOWFLAKE_ROLE: ACCOUNTADMIN
-      run: |
-        echo "🔄 Starting Dispatch Email Report..."
-        python scripts/dispatch_email.py
+
