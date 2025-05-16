@@ -1,127 +1,106 @@
-from fpdf import FPDF
-from dotenv import load_dotenv
 import os
-import smtplib
+import sys
+from dotenv import load_dotenv
+from datetime import datetime
+import pytz
+import snowflake.connector
+from fpdf import FPDF
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from email.mime.text import MIMEText
-from datetime import datetime, timedelta
-import pytz
-import snowflake.connector
-import sys
+import smtplib
+from pathlib import Path
 
-# --- Load environment variables ---
-load_dotenv(dotenv_path='./.env')
+# --- Load .env dynamically from project root ---
+env_path = Path(__file__).parent.parent / '.env'
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+    print("✅ .env loaded successfully.")
+else:
+    print("❌ .env file not found at expected location:", env_path)
+    sys.exit(1)
 
-EMAIL_USER = os.getenv("EMAIL_USER")  # Gmail ID
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")  # Gmail App Password
+# --- Read Snowflake credentials from env ---
+sf_user = os.getenv('SNOWFLAKE_USER')
+sf_password = os.getenv('SNOWFLAKE_PASSWORD')
+sf_account = os.getenv('SNOWFLAKE_ACCOUNT')
+sf_warehouse = os.getenv('SNOWFLAKE_WAREHOUSE')
+sf_database = os.getenv('SNOWFLAKE_DATABASE')
+sf_schema = os.getenv('SNOWFLAKE_SCHEMA')
+sf_role = os.getenv('SNOWFLAKE_ROLE')
+
+# --- Read email credentials ---
+EMAIL_USER = os.getenv("EMAIL_USER")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 TO_EMAIL = "info@shreesaisalt.com"
 BCC_EMAIL = "pkc05@yahoo.com"
-
-SNOWFLAKE_USER = os.getenv("SNOWFLAKE_USER")
-SNOWFLAKE_PASSWORD = os.getenv("SNOWFLAKE_PASSWORD")
-SNOWFLAKE_ACCOUNT = os.getenv("SNOWFLAKE_ACCOUNT")
-SNOWFLAKE_WAREHOUSE = os.getenv("SNOWFLAKE_WAREHOUSE")
-SNOWFLAKE_DATABASE = os.getenv("SNOWFLAKE_DATABASE")
-SNOWFLAKE_SCHEMA = os.getenv("SNOWFLAKE_SCHEMA")
-SNOWFLAKE_ROLE = os.getenv("SNOWFLAKE_ROLE")
 
 # --- Timezone Handling ---
 ist = pytz.timezone('Asia/Kolkata')
 now_ist = datetime.now(ist)
 today_str = now_ist.strftime('%Y-%m-%d')
-weekday = now_ist.weekday()
 
+# --- Debug info ---
+print(f"🔍 DEBUG INFO:")
+print(f"SNOWFLAKE_ACCOUNT: {sf_account}")
+print(f"SNOWFLAKE_USER: {sf_user}")
+print(f"SNOWFLAKE_PASSWORD: {'SET' if sf_password else 'MISSING'}")
+print(f"SNOWFLAKE_WAREHOUSE: {sf_warehouse}")
+print(f"SNOWFLAKE_DATABASE: {sf_database}")
+print(f"SNOWFLAKE_SCHEMA: {sf_schema}")
+print(f"SNOWFLAKE_ROLE: {sf_role}")
+
+# --- Connect to Snowflake ---
 try:
-    # --- Connect to Snowflake ---
     conn = snowflake.connector.connect(
-        user=SNOWFLAKE_USER,
-        password=SNOWFLAKE_PASSWORD,
-        account=SNOWFLAKE_ACCOUNT,
-        warehouse=SNOWFLAKE_WAREHOUSE,
-        database=SNOWFLAKE_DATABASE,
-        schema=SNOWFLAKE_SCHEMA,
-        role=SNOWFLAKE_ROLE
+        user=sf_user,
+        password=sf_password,
+        account=sf_account,
+        warehouse=sf_warehouse,
+        database=sf_database,
+        schema=sf_schema,
+        role=sf_role
     )
-    cur = conn.cursor()
     print("✅ Connected to Snowflake")
+    cur = conn.cursor()
 
-    # --- Holiday Check ---
-    cur.execute(f"SELECT COUNT(*) FROM holidays WHERE holiday_date = '{today_str}'")
+    # --- Check if today is holiday ---
+    query = f"SELECT COUNT(*) FROM {sf_database}.{sf_schema}.HOLIDAYS WHERE holiday_date = %s"
+    cur.execute(query, (today_str,))
     if cur.fetchone()[0] > 0:
         print(f"❌ Today ({today_str}) is a holiday. No dispatch report sent.")
         sys.exit(0)
 
-    # --- Determine report dates ---
-    if weekday == 6:  # Sunday
-        report_dates = [(now_ist - timedelta(days=1)).strftime('%Y-%m-%d')]
-    elif weekday == 0:  # Monday
-        report_dates = [
-            (now_ist - timedelta(days=1)).strftime('%Y-%m-%d'),
-            today_str
-        ]
-    else:
-        report_dates = [today_str]
-
-    report_dates_sql = "', '".join(report_dates)
-    print(f"📊 Fetching dispatched orders for: {report_dates_sql}")
-
-    # --- Fetch Dispatched Orders ---
+    # --- Fetch dispatched orders ---
     query = f"""
-    SELECT 
-        o.customer_name,
-        oi.product_name,
-        oi.ordered_qty,
-        oi.unit,
-        oi.dispatched_qty,
-        oi.dispatched_at,
-        oi.dispatched_by
-    FROM {SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.order_items oi
-    JOIN {SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.orders o
-        ON oi.order_id = o.id
-    WHERE oi.status = 'Dispatched'
-    AND CAST(oi.dispatched_at AS DATE) IN ('{report_dates_sql}')
-    ORDER BY oi.dispatched_at ASC
+        SELECT
+            o.customer_name,
+            oi.product_name,
+            oi.ordered_qty,
+            oi.unit,
+            oi.dispatched_qty,
+            oi.dispatched_at,
+            oi.dispatched_by
+        FROM {sf_database}.{sf_schema}.ORDER_ITEMS oi
+        JOIN {sf_database}.{sf_schema}.ORDERS o
+            ON oi.order_id = o.id
+        WHERE oi.status = 'Dispatched'
+        AND CAST(oi.dispatched_at AS DATE) = %s
+        ORDER BY oi.dispatched_at ASC
     """
-
-    cur.execute(query)
+    cur.execute(query, (today_str,))
     dispatched_orders = cur.fetchall()
 
-    # --- If no dispatched orders, send plain email ---
     if not dispatched_orders:
-        print(f"✅ No dispatched orders to report for {', '.join(report_dates)}.")
-        
-        subject = f"Dispatch Summary - {', '.join(report_dates)}"
-        body = f"""
-Dear Team,
-
-No dispatch orders were found for {', '.join(report_dates)}.
-
-This is an automated daily report.
-
-Regards,
-Shree Sai Industries
-"""
-        msg = MIMEMultipart()
-        msg['From'] = EMAIL_USER
-        msg['To'] = TO_EMAIL
-        msg['Bcc'] = BCC_EMAIL
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain', 'utf-8'))
-
-        with smtplib.SMTP('smtp.gmail.com', 587) as server:
-            server.starttls()
-            server.login(EMAIL_USER, EMAIL_PASSWORD)
-            server.send_message(msg)
-
-        print("✅ Dispatch summary email (no data) sent successfully.")
+        print(f"✅ No dispatched orders to report for {today_str}.")
         sys.exit(0)
 
-    # --- Generate PDF Report ---
+    # --- Generate PDF ---
+    pdf_filename = f"dispatch_summary_{today_str}.pdf"
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, f"Dispatch Summary ({', '.join(report_dates)})", ln=True)
+    pdf.cell(0, 10, f"Dispatch Summary ({today_str})", ln=True)
     pdf.ln(5)
 
     headers = ["#", "Customer", "Product", "Ordered Qty", "Unit", "Dispatched Qty", "By"]
@@ -139,19 +118,15 @@ Shree Sai Industries
             pdf.cell(col_widths[i], 10, str(val), border=1)
         pdf.ln()
 
-    pdf_filename = f"dispatch_summary_{today_str}.pdf"
     pdf.output(pdf_filename)
+    print(f"✅ PDF report generated: {pdf_filename}")
 
-    # --- Compose Email with Attachment ---
-    subject = f"Dispatch Summary - {', '.join(report_dates)}"
+    # --- Compose Email ---
+    subject = f"Dispatch Summary - {today_str}"
     body = f"""
 Dear Team,
 
-Please find attached the dispatch summary for {', '.join(report_dates)}.
-
-- Urgent orders (if any) were prioritized.
-- FIFO order followed for normal dispatches.
-- This is an automated daily report.
+Please find attached the dispatch summary for {today_str}.
 
 Regards,
 Shree Sai Industries
@@ -164,15 +139,10 @@ Shree Sai Industries
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
-    if os.path.exists(pdf_filename):
-        with open(pdf_filename, 'rb') as file:
-            part = MIMEApplication(file.read(), Name=pdf_filename)
-            part['Content-Disposition'] = f'attachment; filename="{pdf_filename}"'
-            msg.attach(part)
-        print(f"✅ Attached PDF: {pdf_filename}")
-    else:
-        print(f"❌ PDF file not found: {pdf_filename}")
-        sys.exit(1)
+    with open(pdf_filename, 'rb') as file:
+        part = MIMEApplication(file.read(), Name=pdf_filename)
+        part['Content-Disposition'] = f'attachment; filename="{pdf_filename}"'
+        msg.attach(part)
 
     # --- Send Email ---
     with smtplib.SMTP('smtp.gmail.com', 587) as server:
@@ -181,7 +151,6 @@ Shree Sai Industries
         server.send_message(msg)
 
     print("✅ Dispatch summary email sent successfully.")
-    sys.exit(0)
 
 except Exception as e:
     print(f"❌ Dispatch Report Failed: {e}")
