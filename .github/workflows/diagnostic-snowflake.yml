@@ -1,0 +1,68 @@
+name: Diagnostic - Snowflake Connection Test
+
+on:
+  workflow_dispatch:  # Allows you to manually trigger from GitHub UI
+
+jobs:
+  diagnostic-snowflake:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Setup Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install snowflake-connector-python python-dotenv
+
+    - name: Diagnostic - Snowflake Connection Check
+      env:
+        SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+        SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+        SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+        SNOWFLAKE_WAREHOUSE: COMPUTE_WH
+        SNOWFLAKE_DATABASE: ORDERS_DB
+        SNOWFLAKE_SCHEMA: ORDERS_SCHEMA
+        SNOWFLAKE_ROLE: ACCOUNTADMIN
+      run: |
+        echo "🔍 Checking Snowflake Connection"
+        python -c "
+import os
+import snowflake.connector
+
+try:
+    print('✅ Environment Variables:')
+    print('SNOWFLAKE_ACCOUNT:', os.getenv('SNOWFLAKE_ACCOUNT'))
+    print('SNOWFLAKE_USER:', os.getenv('SNOWFLAKE_USER'))
+    print('SNOWFLAKE_PASSWORD:', 'SET' if os.getenv('SNOWFLAKE_PASSWORD') else 'MISSING')
+    print('SNOWFLAKE_WAREHOUSE:', os.getenv('SNOWFLAKE_WAREHOUSE'))
+    print('SNOWFLAKE_DATABASE:', os.getenv('SNOWFLAKE_DATABASE'))
+    print('SNOWFLAKE_SCHEMA:', os.getenv('SNOWFLAKE_SCHEMA'))
+    print('SNOWFLAKE_ROLE:', os.getenv('SNOWFLAKE_ROLE'))
+
+    conn = snowflake.connector.connect(
+        user=os.getenv('SNOWFLAKE_USER'),
+        password=os.getenv('SNOWFLAKE_PASSWORD'),
+        account=os.getenv('SNOWFLAKE_ACCOUNT'),
+        warehouse=os.getenv('SNOWFLAKE_WAREHOUSE'),
+        database=os.getenv('SNOWFLAKE_DATABASE'),
+        schema=os.getenv('SNOWFLAKE_SCHEMA'),
+        role=os.getenv('SNOWFLAKE_ROLE')
+    )
+    print('✅ Snowflake Connection Successful.')
+    cur = conn.cursor()
+    cur.execute('SELECT CURRENT_TIMESTAMP();')
+    print('🕒 Snowflake Time:', cur.fetchone()[0])
+    cur.close()
+    conn.close()
+except Exception as e:
+    print('❌ Snowflake Connection Failed:', e)
+    raise
+"
+
