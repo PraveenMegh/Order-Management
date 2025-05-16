@@ -2,45 +2,37 @@ name: Daily Dispatch Email Report
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # 8:30 AM IST
-  workflow_dispatch:
+    - cron: '0 4 * * *'  # This is UTC time, 4:00 AM UTC = 9:30 AM IST
+  workflow_dispatch:  # Allows manual run from GitHub UI
 
 jobs:
-  dispatch-report:
+  dispatch-email:
     runs-on: ubuntu-latest
 
     steps:
-      - name: ✅ Checkout Repo
-        uses: actions/checkout@v4
+    - name: Checkout Repository
+      uses: actions/checkout@v3
 
-      - name: 🐍 Setup Python 3.11
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+    - name: Setup Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
 
-      - name: 📦 Install Python dependencies
-        run: |
-          pip install -r requirements.txt
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-      - name: 📤 Run Dispatch Email Script
-        env:
-          EMAIL_USER: ${{ secrets.EMAIL_USER }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
-          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
-        run: |
-          echo "🔄 Starting Dispatch Email Report..."
-          python scripts/dispatch_email.py
-
-      - name: ✅ Dispatch Report Success
-        if: success()
-        run: echo "✅ Dispatch Report completed successfully!"
-
-      - name: ❌ Dispatch Report Failed
-        if: failure()
-        run: echo "❌ Dispatch Report failed. Please check logs."
+    - name: Run Dispatch Email Script
+      env:
+        EMAIL_USER: ${{ secrets.EMAIL_USER }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+        SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+        SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+        SNOWFLAKE_WAREHOUSE: COMPUTE_WH
+        SNOWFLAKE_DATABASE: ORDERS_DB
+        SNOWFLAKE_SCHEMA: ORDERS_SCHEMA
+        SNOWFLAKE_ROLE: ACCOUNTADMIN
+      run: |
+        python scripts/dispatch_email.py
