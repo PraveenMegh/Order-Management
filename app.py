@@ -6,7 +6,7 @@ from utils.header import show_header
 # --- Streamlit Config ---
 st.set_page_config(page_title="Shree Sai Industries - Login", page_icon="📦", layout="wide")
 
-# --- Header (Logo & Title) ---
+# --- Header ---
 show_header()
 
 # --- Mobile Responsive Styling ---
@@ -30,12 +30,12 @@ st.markdown("<h2>🔒 Please Login</h2>", unsafe_allow_html=True)
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)
 c = conn.cursor()
 
-# --- Create Users Table if not exists ---
+# --- Ensure Users Table with hashed password ---
 c.execute('''
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
+        password BLOB NOT NULL,
         role TEXT NOT NULL
     )
 ''')
@@ -48,7 +48,7 @@ def login_user(username, password):
     if result:
         hashed_password, role = result
         if bcrypt.checkpw(password.encode('utf-8'), hashed_password):
-            return {"username": username, "role": role}
+            return role
     return None
 
 # --- Login Form ---
@@ -59,11 +59,18 @@ with st.form("login_form", clear_on_submit=False):
 
 # --- Login Logic ---
 if login_button:
-    user = login_user(username, password)
-    if user:
-        st.session_state["username"] = user["username"]
-        st.session_state["role"] = user["role"]
-        st.success(f"✅ Welcome, {user['username']}! Redirecting...")
-        st.switch_page("pages/1_Orders.py")
+    role = login_user(username, password)
+    if role:
+        st.session_state["username"] = username
+        st.session_state["role"] = role
+        st.success(f"✅ Welcome, {username} ({role})!")
+
+        # --- Role-based Redirection ---
+        if role == "Admin":
+            st.switch_page("pages/1_Orders.py")
+        elif role == "Sales":
+            st.switch_page("pages/1_Orders.py")
+        elif role == "Dispatch":
+            st.switch_page("pages/2_Dispatch.py")
     else:
         st.error("❌ Invalid username or password. Please try again.")

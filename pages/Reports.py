@@ -8,17 +8,18 @@ import matplotlib.pyplot as plt
 
 # --- Authentication ---
 check_login()
-show_header()
-
-# --- Restrict access to Admin only ---
 if st.session_state.get("role") != "Admin":
     st.error("🚫 You do not have permission to access this page.")
     st.stop()
 
-# --- Connect to SQLite DB ---
+# --- UI Header ---
+show_header()
+st.title("📊 Order Reports")
+
+# --- DB Connection ---
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)
 
-# --- Fetch Pending Products ---
+# --- Fetch Data ---
 pending_products = pd.read_sql_query("""
     SELECT oi.order_id, o.customer_name, oi.product_name, oi.ordered_qty, oi.unit, oi.price, oi.unit_type,
            o.currency, o.urgent, o.created_at
@@ -27,7 +28,6 @@ pending_products = pd.read_sql_query("""
     WHERE oi.status = 'Pending'
 """, conn)
 
-# --- Fetch Dispatched Products ---
 dispatched_products = pd.read_sql_query("""
     SELECT oi.order_id, o.customer_name, oi.product_name, oi.ordered_qty, oi.dispatched_qty, oi.unit,
            oi.price, oi.unit_type, o.currency, o.urgent, o.created_at, oi.dispatched_at, oi.dispatched_by
@@ -45,40 +45,27 @@ if not dispatched_products.empty:
     dispatched_products['dispatched_at'] = pd.to_datetime(dispatched_products['dispatched_at'], errors='coerce')
     dispatched_products['shortfall'] = dispatched_products['ordered_qty'] - dispatched_products['dispatched_qty']
 
-# --- UI ---
-st.title("📊 Order Reports")
-
-# --- Pending Orders Section ---
+# --- Pending Orders ---
 st.subheader("📦 Pending Products")
-
 if pending_products.empty:
     st.success("✅ No pending products!")
 else:
     def highlight_urgent(val):
         return 'background-color: #FFD1D1' if val == 1 else ''
-    st.dataframe(
-        pending_products.style.applymap(highlight_urgent, subset=["urgent"]),
-        use_container_width=True
-    )
+    st.dataframe(pending_products.style.applymap(highlight_urgent, subset=["urgent"]), use_container_width=True)
 
 st.divider()
 
-# --- Dispatched Orders Section ---
+# --- Dispatched Orders ---
 st.subheader("✅ Dispatched Products")
-
 if dispatched_products.empty:
     st.info("ℹ️ No dispatched products yet.")
 else:
     st.dataframe(dispatched_products, use_container_width=True)
     csv = dispatched_products.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Download Dispatched Products (CSV)",
-        data=csv,
-        file_name="dispatched_products.csv",
-        mime="text/csv"
-    )
+    st.download_button("📥 Download Dispatched Products (CSV)", data=csv, file_name="dispatched_products.csv", mime="text/csv")
 
-    # --- Charts Section ---
+    # --- Charts ---
     st.subheader("📈 Product Demand Analysis")
 
     demand_df = dispatched_products.groupby('product_name')['dispatched_qty'].sum().reset_index()
@@ -87,16 +74,14 @@ else:
     fig, ax = plt.subplots()
     demand_df.sort_values(by='dispatched_qty', ascending=False).plot.bar(x='product_name', y='dispatched_qty', ax=ax)
     ax.set_ylabel('Total Dispatched Quantity')
-    ax.set_xlabel('Product')
     st.pyplot(fig)
 
-    st.write("### 💤 Low/Zero-Demand Products")
+    st.write("### 💤 Low-Demand Products (<=5)")
     low_demand = demand_df[demand_df['dispatched_qty'] <= 5]
     if not low_demand.empty:
         fig2, ax2 = plt.subplots()
-        low_demand.sort_values(by='dispatched_qty').plot.bar(x='product_name', y='dispatched_qty', ax=ax2)
+        low_demand.sort_values(by='dispatched_qty').plot.bar(x='product_name', y='dispatched_qty', ax=ax2, color='orange')
         ax2.set_ylabel('Total Dispatched Quantity')
-        ax2.set_xlabel('Product')
         st.pyplot(fig2)
     else:
         st.info("✅ No low-demand products.")
@@ -109,13 +94,12 @@ else:
         fig3, ax3 = plt.subplots()
         trend_summary.plot(x='dispatch_date', y='dispatched_qty', ax=ax3, marker='o')
         ax3.set_ylabel('Total Dispatched Qty')
-        ax3.set_xlabel('Dispatch Date')
         st.pyplot(fig3)
     else:
-        st.info("ℹ️ No dispatch trend yet.")
+        st.info("ℹ️ No dispatch trend data yet.")
 
-    # --- PDF Download ---
-    st.write("### 📤 Download Full Report (PDF)")
+    # --- PDF Report ---
+    st.write("### 📄 Download Full Dispatch Report (PDF)")
 
     def generate_pdf():
         pdf = FPDF()
@@ -124,21 +108,17 @@ else:
         pdf.cell(0, 10, "Dispatched Products Report", ln=True)
         pdf.ln(10)
         pdf.set_font("Arial", size=10)
-        for index, row in dispatched_products.iterrows():
+        for _, row in dispatched_products.iterrows():
+            dispatched_at = row['dispatched_at'].strftime('%d-%m-%Y %I:%M %p') if pd.notnull(row['dispatched_at']) else 'N/A'
             pdf.multi_cell(0, 8,
                 f"Order ID: {row['order_id']}, Customer: {row['customer_name']}, Product: {row['product_name']}, "
                 f"Qty: {row['ordered_qty']}, Dispatched: {row['dispatched_qty']}, Unit: {row['unit']}, "
-                f"Dispatched At: {row['dispatched_at'].strftime('%d-%m-%Y %I:%M %p') if pd.notnull(row['dispatched_at']) else 'N/A'}"
+                f"Dispatched At: {dispatched_at}, By: {row['dispatched_by']}"
             )
             pdf.ln(2)
         return pdf.output(dest='S').encode('latin-1')
 
     pdf_bytes = generate_pdf()
-    st.download_button(
-        label="📄 Download PDF Report",
-        data=pdf_bytes,
-        file_name="dispatched_products_report.pdf",
-        mime="application/pdf"
-    )
+    st.download_button("📄 Download PDF Report", data=pdf_bytes, file_name="dispatched_products_report.pdf", mime="application/pdf")
 
 conn.close()

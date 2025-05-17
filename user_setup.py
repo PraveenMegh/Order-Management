@@ -1,4 +1,5 @@
 import sqlite3
+import bcrypt
 
 # --- Connect to database ---
 conn = sqlite3.connect('data/orders.db', check_same_thread=False)
@@ -9,13 +10,16 @@ c.execute('''
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
+        password BLOB NOT NULL,   # 👈 BLOB to store bytes hash
         role TEXT NOT NULL
     )
 ''')
 conn.commit()
 
-# --- Predefined users ---
+# --- Optional: Clear old users ---
+c.execute('DELETE FROM users')
+
+# --- Insert Users with hashed passwords ---
 users = [
     ('admin', 'admin123', 'Admin'),
     ('ajay.sharma', 'ajay123', 'Dispatch'),
@@ -23,16 +27,11 @@ users = [
     ('vishal.sharma', 'vishal123', 'Sales')
 ]
 
-# --- Insert users only if not exists (safe) ---
-for username, password, role in users:
-    c.execute("SELECT 1 FROM users WHERE username = ?", (username,))
-    if not c.fetchone():
-        c.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', (username, password, role))
-        print(f"✅ User created: {username}")
-    else:
-        print(f"ℹ️ User already exists: {username}")
+for username, plain_password, role in users:
+    hashed_password = bcrypt.hashpw(plain_password.encode('utf-8'), bcrypt.gensalt())
+    c.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', (username, hashed_password, role))
 
 conn.commit()
 conn.close()
 
-print("✅ User setup completed successfully!")
+print("✅ Users created with hashed passwords!")

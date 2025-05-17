@@ -21,6 +21,6 @@ def login(username, password):
 
 # --- Check Login Session Function ---
 def check_login():
-    if "username" not in st.session_state or "role" not in st.session_state:
-        st.error("🚫 Please login first from the main page.")
+    if "username" not in st.session_state:
+        st.error("🚫 Please login first.")
         st.stop()
