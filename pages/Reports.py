@@ -1,9 +1,8 @@
 import streamlit as st
-from snowflake.snowpark.context import get_active_session
+import sqlite3
 import pandas as pd
 from utils.header import show_header
 from utils.auth import check_login
-from io import BytesIO
 from fpdf import FPDF
 import matplotlib.pyplot as plt
 
@@ -16,30 +15,26 @@ if st.session_state.get("role") != "Admin":
     st.error("🚫 You do not have permission to access this page.")
     st.stop()
 
-# --- Get Snowflake session ---
-try:
-    session = get_active_session()
-except Exception:
-    st.error("🚫 Could not connect to Snowflake session. Make sure you're running in Snowflake Native App.")
-    st.stop()
+# --- Connect to SQLite DB ---
+conn = sqlite3.connect('data/orders.db', check_same_thread=False)
 
 # --- Fetch Pending Products ---
-pending_products = session.sql("""
+pending_products = pd.read_sql_query("""
     SELECT oi.order_id, o.customer_name, oi.product_name, oi.ordered_qty, oi.unit, oi.price, oi.unit_type,
            o.currency, o.urgent, o.created_at
     FROM order_items oi
     JOIN orders o ON oi.order_id = o.id
     WHERE oi.status = 'Pending'
-""").to_pandas()
+""", conn)
 
 # --- Fetch Dispatched Products ---
-dispatched_products = session.sql("""
+dispatched_products = pd.read_sql_query("""
     SELECT oi.order_id, o.customer_name, oi.product_name, oi.ordered_qty, oi.dispatched_qty, oi.unit,
            oi.price, oi.unit_type, o.currency, o.urgent, o.created_at, oi.dispatched_at, oi.dispatched_by
     FROM order_items oi
     JOIN orders o ON oi.order_id = o.id
     WHERE oi.status = 'Dispatched'
-""").to_pandas()
+""", conn)
 
 # --- Format Dates ---
 if not pending_products.empty:
@@ -86,10 +81,8 @@ else:
     # --- Charts Section ---
     st.subheader("📈 Product Demand Analysis")
 
-    # Total dispatched qty per product
     demand_df = dispatched_products.groupby('product_name')['dispatched_qty'].sum().reset_index()
 
-    # Top demand chart
     st.write("### 🔥 High-Demand Products")
     fig, ax = plt.subplots()
     demand_df.sort_values(by='dispatched_qty', ascending=False).plot.bar(x='product_name', y='dispatched_qty', ax=ax)
@@ -97,19 +90,17 @@ else:
     ax.set_xlabel('Product')
     st.pyplot(fig)
 
-    # Low/Zero demand chart
     st.write("### 💤 Low/Zero-Demand Products")
-    low_demand = demand_df[demand_df['dispatched_qty'] <= 5]  # Threshold 5 units or less
+    low_demand = demand_df[demand_df['dispatched_qty'] <= 5]
     if not low_demand.empty:
         fig2, ax2 = plt.subplots()
-        low_demand.sort_values(by='dispatched_qty').plot.bar(x='product_name', y='dispatched_qty', ax=ax2, color='orange')
+        low_demand.sort_values(by='dispatched_qty').plot.bar(x='product_name', y='dispatched_qty', ax=ax2)
         ax2.set_ylabel('Total Dispatched Quantity')
         ax2.set_xlabel('Product')
         st.pyplot(fig2)
     else:
-        st.info("✅ No low-demand products (all have decent dispatches).")
+        st.info("✅ No low-demand products.")
 
-    # Dispatch trends chart
     st.write("### 📅 Dispatch Trend Over Time")
     trend_df = dispatched_products.copy()
     trend_df['dispatch_date'] = trend_df['dispatched_at'].dt.date
@@ -121,7 +112,7 @@ else:
         ax3.set_xlabel('Dispatch Date')
         st.pyplot(fig3)
     else:
-        st.info("ℹ️ No dispatch trend available yet.")
+        st.info("ℹ️ No dispatch trend yet.")
 
     # --- PDF Download ---
     st.write("### 📤 Download Full Report (PDF)")
@@ -149,3 +140,5 @@ else:
         file_name="dispatched_products_report.pdf",
         mime="application/pdf"
     )
+
+conn.close()

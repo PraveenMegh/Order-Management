@@ -6,8 +6,6 @@ from datetime import datetime
 from utils.header import show_header
 from utils.auth import check_login
 
-st.error("🟢 THIS IS THE NEW CODE RUNNING!")
-
 # --- Authentication ---
 check_login()
 if st.session_state.get("role") not in ["Admin", "Sales"]:
@@ -16,15 +14,13 @@ if st.session_state.get("role") not in ["Admin", "Sales"]:
 
 show_header()
 
-st.write("Using database path:", os.path.abspath('data/orders.db'))
-
-# --- Connect to DB ---
-conn = sqlite3.connect('data/orders.db', check_same_thread=False)
+# --- Connect to SQLite DB ---
+db_path = 'data/orders.db'
+conn = sqlite3.connect(db_path, check_same_thread=False)
 c = conn.cursor()
 
 # --- Get current user ---
 username = st.session_state.get("username")
-role = st.session_state.get("role")
 
 # --- FORM FOR NEW ORDER ---
 with st.form("new_order_form"):
@@ -34,7 +30,6 @@ with st.form("new_order_form"):
     currency = st.selectbox("Currency", ["INR", "USD", "EUR"])
     
     num_products = st.number_input("How many products?", min_value=1, max_value=10, value=1)
-    
     product_inputs = []
     for i in range(num_products):
         st.markdown(f"### Product {i+1}")
@@ -68,17 +63,15 @@ with st.form("new_order_form"):
         else:
             st.error("Please fill customer name and all product names.")
 
-# --- Query user’s orders (view-only summary) ---
+# --- View Orders ---
 orders_df = pd.read_sql_query("""
     SELECT 
         o.id AS order_id,
-        o.order_code,
         o.customer_name,
         o.username AS salesperson,
         o.currency,
         o.urgent,
         o.created_at,
-        oi.id AS item_id,
         oi.product_name,
         oi.ordered_qty,
         oi.unit,
@@ -94,44 +87,33 @@ orders_df = pd.read_sql_query("""
     ORDER BY o.created_at ASC
 """, conn, params=(username,))
 
-# --- Format dates ---
 if not orders_df.empty:
     orders_df['created_at'] = pd.to_datetime(orders_df['created_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
     orders_df['dispatched_at'] = pd.to_datetime(orders_df['dispatched_at'], errors='coerce').dt.strftime('%d-%m-%Y %I:%M %p')
 
-# --- Orders Summary View (VIEW-ONLY, NO EDITING) ---
 st.title("📜 Your Orders")
 
 if orders_df.empty:
-    st.info("ℹ️ You have no pending or dispatched orders.")
+    st.info("ℹ️ You have no orders yet.")
 else:
     grouped = orders_df.groupby('order_id')
-
     for order_id, order_items in grouped:
-        order_code = order_items['order_code'].iloc[0]
-        customer_name = order_items['customer_name'].iloc[0]
-        created_on = order_items['created_at'].iloc[0]
-        urgent = '🔥 Yes' if order_items['urgent'].iloc[0] else 'No'
-        currency = order_items['currency'].iloc[0]
-
-        with st.expander(f"Order {order_code} - {customer_name}"):
-            st.markdown(f"**Created On**: {created_on}")
-            st.markdown(f"**Salesperson**: {order_items['salesperson'].iloc[0]}")
-            st.markdown(f"**Currency**: {currency}")
-            st.markdown(f"**Urgent**: {urgent}")
-
+        with st.expander(f"Order #{order_id} - {order_items['customer_name'].iloc[0]}"):
+            st.write(f"Created On: {order_items['created_at'].iloc[0]}")
+            st.write(f"Currency: {order_items['currency'].iloc[0]}")
+            st.write(f"Urgent: {'🔥 Yes' if order_items['urgent'].iloc[0] else 'No'}")
             for _, row in order_items.iterrows():
-                st.markdown(f"### Product: {row['product_name']}")
-                st.markdown(f"- Ordered Qty: {row['ordered_qty']} {row['unit']}")
-                st.markdown(f"- Unit Price: {row['price']} {currency}")
-                st.markdown(f"- Unit Type: {row['unit_type']}")
-                st.markdown(f"- Status: {row['status']}")
+                st.write(f"Product: {row['product_name']}")
+                st.write(f"- Ordered Qty: {row['ordered_qty']} {row['unit']}")
+                st.write(f"- Unit Price: {row['price']} {row['currency']}")
+                st.write(f"- Unit Type: {row['unit_type']}")
+                st.write(f"- Status: {row['status']}")
                 if row['dispatched_qty']:
-                    st.markdown(f"- Dispatched Qty: {row['dispatched_qty']}")
-                    st.markdown(f"- Dispatched On: {row['dispatched_at']}")
-                    st.markdown(f"- Dispatched By: {row['dispatched_by']}")
+                    st.write(f"- Dispatched Qty: {row['dispatched_qty']}")
+                    st.write(f"- Dispatched On: {row['dispatched_at']}")
+                    st.write(f"- Dispatched By: {row['dispatched_by']}")
                 else:
-                    st.markdown("✅ Pending dispatch.")
+                    st.write("✅ Pending dispatch.")
 
 st.divider()
 

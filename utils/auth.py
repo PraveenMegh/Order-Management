@@ -3,12 +3,13 @@ import sqlite3
 import bcrypt
 import os
 
-# Connect to database
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+# --- Database Connection ---
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DB_PATH = os.path.join(BASE_DIR, 'data', 'orders.db')
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 c = conn.cursor()
 
+# --- User Login Function ---
 def login(username, password):
     c.execute('SELECT password, role FROM users WHERE username = ?', (username,))
     result = c.fetchone()
@@ -18,7 +19,8 @@ def login(username, password):
             return role
     return None
 
+# --- Check Login Session Function ---
 def check_login():
-    if "username" not in st.session_state:
+    if "username" not in st.session_state or "role" not in st.session_state:
         st.error("🚫 Please login first from the main page.")
         st.stop()

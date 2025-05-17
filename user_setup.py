@@ -15,7 +15,7 @@ c.execute('''
 ''')
 conn.commit()
 
-# --- Insert Users (One-time) ---
+# --- Predefined users ---
 users = [
     ('admin', 'admin123', 'Admin'),
     ('ajay.sharma', 'ajay123', 'Dispatch'),
@@ -23,14 +23,16 @@ users = [
     ('vishal.sharma', 'vishal123', 'Sales')
 ]
 
-# --- Optional: Clear old users ---
-c.execute('DELETE FROM users')
-
-# --- Insert new users ---
+# --- Insert users only if not exists (safe) ---
 for username, password, role in users:
-    c.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', (username, password, role))
+    c.execute("SELECT 1 FROM users WHERE username = ?", (username,))
+    if not c.fetchone():
+        c.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', (username, password, role))
+        print(f"✅ User created: {username}")
+    else:
+        print(f"ℹ️ User already exists: {username}")
 
 conn.commit()
 conn.close()
 
-print("✅ Users created successfully!")
+print("✅ User setup completed successfully!")
