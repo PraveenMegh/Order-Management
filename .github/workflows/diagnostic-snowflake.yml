@@ -1,0 +1,32 @@
+name: Daily Dispatch Report Email
+
+on:
+  schedule:
+    - cron: '30 3 * * *'  # Runs at 9:00 AM IST (which is UTC+5:30 → 3:30 UTC)
+  workflow_dispatch:
+
+jobs:
+  send-dispatch-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install fpdf pandas
+
+      - name: Generate and email report
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          RECIPIENT: ${{ secrets.RECIPIENT }}
+        run: |
+          python3 dispatch_report_pdf.py
+          python3 auto_email_dispatch.py
+
