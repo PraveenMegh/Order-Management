@@ -13,7 +13,7 @@ def send_email_with_pdf(pdf_file, sender, password, recipient, subject, body):
     msg.attach(MIMEText(body, 'plain'))
 
     with open(pdf_file, "rb") as f:
-    part = MIMEApplication(f.read(), Name=pdf_file)
+        part = MIMEApplication(f.read(), Name=pdf_file)
     part['Content-Disposition'] = f'attachment; filename="{pdf_file}"'
     msg.attach(part)
 
