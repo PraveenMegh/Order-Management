@@ -1,9 +1,9 @@
-- name: Run python auto_email_dispatch.py
+name: Daily Dispatch Email
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # Runs every day at 9:00 AM IST (3:30 AM UTC)
-  workflow_dispatch:     # Manual trigger
+    - cron: '0 3 * * *'  # Runs at 9:00 AM IST daily
+  workflow_dispatch:     # Allows manual trigger from GitHub UI
 
 jobs:
   email-dispatch-report:
@@ -27,8 +27,7 @@ jobs:
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
-          RECIPIENT: ${{ info@shreesaisalt.com }}
-       run |  
-          python auto_email_dispatch.py
-
+          RECIPIENT: ${{ secrets.RECIPIENT }}
+        run: |
+          python daily_dispatch_email.py
 
