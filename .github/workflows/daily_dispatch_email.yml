@@ -2,32 +2,34 @@ name: Daily Dispatch Email
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # Runs at 9:00 AM IST daily
-  workflow_dispatch:     # Allows manual trigger from GitHub UI
+    - cron: '0 4 * * *'  # Runs every day at 9:30 AM IST (4:00 UTC)
+  workflow_dispatch:     # Manual trigger option
 
 jobs:
   email-dispatch-report:
     runs-on: ubuntu-latest
 
+    env:
+      EMAIL_USER: ${{ secrets.EMAIL_USER }}
+      EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+      RECIPIENT: ${{ secrets.RECIPIENT }}
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pandas fpdf
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas fpdf
 
-      - name: Send Dispatch Email
-        env:
-          EMAIL_USER: ${{ secrets.EMAIL_USER }}
-          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
-          RECIPIENT: ${{ secrets.RECIPIENT }}
-        run: |
-          python daily_dispatch_email.py
+    - name: Generate and send dispatch email
+      run: |
+        python3 dispatch_report_pdf.py
+        python3 daily_dispatch_email.py
 
