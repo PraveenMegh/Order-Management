@@ -43,7 +43,7 @@ if __name__ == "__main__":
             password=password,
             recipient=recipient,
             subject="✅ Daily Dispatch Summary",
-            body="Hello,\n\nPlease find attached today's dispatch summary report.\n\nRegards,\nShree Sai Salt"
+            body="DearSir/Madam,\n\nPlease find attached today's dispatch summary report.\n\nRegards,\nShree Sai Salt"
         )
     else:
         # If no dispatch, send text-only email
@@ -60,6 +60,6 @@ if __name__ == "__main__":
         server.login(sender, password)
         server.send_message(msg)
         server.quit()
-        print(f"📭 Email sent to {recipient} stating no dispatch today.")
+        print(f"📭 Email sent to {recipient} stating There is no dispatch today.")
 
 
