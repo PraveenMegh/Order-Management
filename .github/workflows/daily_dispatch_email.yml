@@ -27,7 +27,7 @@ jobs:
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
-          RECIPIENT: ${{ secrets.RECIPIENT }}
+          RECIPIENT: ${{ info@shreesaisalt.com }}
        run |  
           python auto_email_dispatch.py
 
