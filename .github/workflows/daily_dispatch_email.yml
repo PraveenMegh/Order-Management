@@ -1,4 +1,4 @@
-name: Daily Dispatch Email
+- name: Run python auto_email_dispatch.py
 
 on:
   schedule:
@@ -28,6 +28,7 @@ jobs:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           RECIPIENT: ${{ secrets.RECIPIENT }}
-        run: |
-          python send_dispatch_email.py
+       run |  
+          python auto_email_dispatch.py
+
 
