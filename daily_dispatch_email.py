@@ -7,7 +7,7 @@ import os
 def send_email_with_pdf(pdf_file, sender, password, recipient, subject, body):
     msg = MIMEMultipart()
     msg['From'] = sender
-    msg['To'] = info@shreesaisalt.com
+    msg['To'] = recipient
     msg['Subject'] = subject
 
     msg.attach(MIMEText(body, 'plain'))
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     sender = os.getenv("EMAIL_USER")
     password = os.getenv("EMAIL_PASS")
-    recipient = os.getenv("info@shreesaisalt.com")
+    recipient = os.getenv("RECIPIENT")
 
     if pdf_file:
         # If dispatch report exists, send it
@@ -41,7 +41,7 @@ if __name__ == "__main__":
             pdf_file=pdf_file,
             sender=sender,
             password=password,
-            recipient=info@shreesaisalt.com,
+            recipient=recipient,
             subject="Daily Dispatch Summary",
             body="""Hello,
 
@@ -57,7 +57,7 @@ Shree Sai Industries
             pdf_file=None,
             sender=sender,
             password=password,
-            recipient=info@shreesaisalt.com,
+            recipient=recipient,
             subject="No Dispatch Today",
             body="""Hello,
 
