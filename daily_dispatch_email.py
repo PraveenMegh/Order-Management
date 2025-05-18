@@ -27,18 +27,44 @@ def send_email_with_pdf(pdf_file, sender, password, recipient, subject, body):
 
 if __name__ == "__main__":
     from dispatch_report_pdf import generate_dispatch_pdf
-
-    # Read from GitHub Actions secrets (automatically available in the environment)
-    sender = os.environ.get("EMAIL_USER")
-    password = os.environ.get("EMAIL_PASS")
-    recipient = os.environ.get("info@shreesaisalt.com")
+    import os
 
     pdf_file = generate_dispatch_pdf()
-    if pdf_file and sender and password and recipient:
+
+    sender = os.getenv("EMAIL_USER")
+    password = os.getenv("EMAIL_PASS")
+    recipient = os.getenv("info@shreesaisalt.com")
+
+    if pdf_file:
+        # If dispatch report exists, send it
         send_email_with_pdf(
             pdf_file=pdf_file,
             sender=sender,
             password=password,
             recipient=recipient,
-            subject='📦 Daily Dispatch Summary',
-            body="Hello,\n\nPlease find attached today's dispatch summary report.\n\nRegards,\
+            subject="Daily Dispatch Summary",
+            body="""Hello,
+
+Please find attached today's dispatch summary report.
+
+Regards,
+Shree Sai Industries
+"""
+        )
+    else:
+        # If no dispatches, send a no-dispatch email
+        send_email_with_pdf(
+            pdf_file=None,
+            sender=sender,
+            password=password,
+            recipient=recipient,
+            subject="No Dispatch Today",
+            body="""Hello,
+
+There are no dispatches for today or today is a holiday.
+
+Regards,
+Shree Sai Industries
+"""
+        )
+
