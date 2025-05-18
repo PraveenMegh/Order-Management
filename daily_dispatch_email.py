@@ -43,14 +43,14 @@ if __name__ == "__main__":
             password=password,
             recipient=recipient,
             subject="✅ Daily Dispatch Summary",
-            body="DearSir/Madam,\n\nPlease find attached today's dispatch summary report.\n\nRegards,\nShree Sai Salt"
+            body="DearSir/Madam,\n\nPlease find attached today's dispatch summary report.\n\nRegards,\nTeam Admin,\nShree Sai Salt"
         )
     else:
         # If no dispatch, send text-only email
         import smtplib
         from email.mime.text import MIMEText
 
-        msg = MIMEText("Dear Sir/Madam,\n\n📭 No dispatches for today.\n\nRegards,\nAdmin Team nShree Sai Industries")
+        msg = MIMEText("Dear Sir/Madam,\n\n📭 No dispatches for today.\n\nRegards,\nAdmin Team,\nShree Sai Industries")
         msg["From"] = sender
         msg["To"] = recipient
         msg["Subject"] = "📭 No Dispatch Today"
@@ -60,6 +60,6 @@ if __name__ == "__main__":
         server.login(sender, password)
         server.send_message(msg)
         server.quit()
-        print(f"📭 Email sent to {recipient} stating there is no dispatch today.")
+        print(f"📭 Email sent to {recipient} stating no dispatch today.")
 
 
