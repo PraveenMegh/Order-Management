@@ -29,42 +29,37 @@ if __name__ == "__main__":
     from dispatch_report_pdf import generate_dispatch_pdf
     import os
 
-    pdf_file = generate_dispatch_pdf()
-
     sender = os.getenv("EMAIL_USER")
     password = os.getenv("EMAIL_PASS")
     recipient = os.getenv("RECIPIENT")
 
+    pdf_file = generate_dispatch_pdf()
+
     if pdf_file:
-        # If dispatch report exists, send it
+        # If dispatch report exists, send it with attachment
         send_email_with_pdf(
             pdf_file=pdf_file,
             sender=sender,
             password=password,
             recipient=recipient,
-            subject="Daily Dispatch Summary",
-            body="""Hello,
-
-Please find attached today's dispatch summary report.
-
-Regards,
-Shree Sai Industries
-"""
+            subject="✅ Daily Dispatch Summary",
+            body="Hello,\n\nPlease find attached today's dispatch summary report.\n\nRegards,\nShree Sai Salt"
         )
     else:
-       # If no dispatches, send a no-dispatch email
-       send_email_with_pdf(
-           pdf_file=None,
-           sender=sender,
-           password=password,
-           recipient=recipient,
-           subject="No Dispatch Today",
-           body="""Hello,
+        # If no dispatch, send text-only email
+        import smtplib
+        from email.mime.text import MIMEText
 
-There are no dispatches for today or today is a holiday.
+        msg = MIMEText("Hello,\n\n📭 No dispatches for today.\n\nRegards,\nShree Sai Salt")
+        msg["From"] = sender
+        msg["To"] = recipient
+        msg["Subject"] = "📭 No Dispatch Today"
 
-Regards,
-Shree Sai Industries
-"""
-        )
+        server = smtplib.SMTP('smtp.mail.yahoo.com', 587)
+        server.starttls()
+        server.login(sender, password)
+        server.send_message(msg)
+        server.quit()
+        print(f"📭 Email sent to {recipient} stating no dispatch today.")
+
 
