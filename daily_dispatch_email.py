@@ -13,7 +13,7 @@ def send_email_with_pdf(pdf_file, sender, password, recipient, subject, body):
     msg.attach(MIMEText(body, 'plain'))
 
     with open(pdf_file, "rb") as f:
-        part = MIMEApplication(f.read(), Name=pdf_file)
+    part = MIMEApplication(f.read(), Name=pdf_file)
     part['Content-Disposition'] = f'attachment; filename="{pdf_file}"'
     msg.attach(part)
 
@@ -52,14 +52,14 @@ Shree Sai Industries
 """
         )
     else:
-        # If no dispatches, send a no-dispatch email
-        send_email_with_pdf(
-            pdf_file=None,
-            sender=sender,
-            password=password,
-            recipient=recipient,
-            subject="No Dispatch Today",
-            body="""Hello,
+       # If no dispatches, send a no-dispatch email
+       send_email_with_pdf(
+           pdf_file=None,
+           sender=sender,
+           password=password,
+           recipient=recipient,
+           subject="No Dispatch Today",
+           body="""Hello,
 
 There are no dispatches for today or today is a holiday.
 
