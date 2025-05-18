@@ -50,7 +50,7 @@ if __name__ == "__main__":
         import smtplib
         from email.mime.text import MIMEText
 
-        msg = MIMEText("Hello,\n\n📭 No dispatches for today.\n\nRegards,\nAdmin Team Shree Sai Industries")
+        msg = MIMEText("Dear Sir/Madam,\n\n📭 No dispatches for today.\n\nRegards,\nAdmin Team nShree Sai Industries")
         msg["From"] = sender
         msg["To"] = recipient
         msg["Subject"] = "📭 No Dispatch Today"
@@ -60,6 +60,6 @@ if __name__ == "__main__":
         server.login(sender, password)
         server.send_message(msg)
         server.quit()
-        print(f"📭 Email sent to {recipient} stating There is no dispatch today.")
+        print(f"📭 Email sent to {recipient} stating there is no dispatch today.")
 
 
