@@ -4,13 +4,25 @@ import bcrypt
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
+import os
+
+# --- Safe DB close helper ---
+def safe_close(conn):
+    try:
+        conn.close()
+    except Exception as e:
+        st.warning(f"Warning closing DB: {e}")
 
 def show_header():
-    col1, col2 = st.columns([1, 5])
+    col1, col2 = st.columns([1, 9])
     with col1:
         st.image("assets/logo.jpg", width=140)
     with col2:
-        st.markdown("## Shree Sai Salt - Order Management")
+        st.markdown("""
+            <div style='display: flex; align-items: center; height: 120px;'>
+                <h1 style='margin: 0; padding-left: 0px;'>Shree Sai Industries</h1>
+            </div>
+        """, unsafe_allow_html=True)
 
 def return_menu_logout(key_prefix):
     st.markdown("---")
@@ -18,7 +30,6 @@ def return_menu_logout(key_prefix):
         st.session_state['page'] = 'Main Menu'
     if st.button("🔒 Logout", key=f"logout_{key_prefix}"):
         st.session_state['logged_in'] = False
-        st.rerun()
 
 def login_page():
     show_header()
@@ -84,288 +95,496 @@ def main_menu():
         st.rerun()
 
 def reports_page():
-    show_header()
-    st.markdown(f"### 👋 Welcome back, **{st.session_state['username']}**!")
-    st.info("You're viewing Reports and Analysis.")
+    st.title("📊 Reports and Analytics")
+    st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
+    st.info("Track demand, dispatched summary, and performance insights.")
 
-    # Connect DB
-    conn = sqlite3.connect('orders.db')
+    conn = sqlite3.connect("orders.db")
     c = conn.cursor()
 
-    # --- Max Demand Product ---
-    st.subheader("Max Demand Product (By Ordered Quantity)")
-    c.execute('''
-        SELECT product_name, SUM(quantity) as total_qty
-        FROM order_products
-        WHERE status = 'Original'
-        GROUP BY product_name
-        ORDER BY total_qty DESC
-        LIMIT 1
-    ''')
-    result = c.fetchone()
-    if result:
-        st.success(f"Highest Demand: {result[0]} with {result[1]} units")
-    else:
-        st.warning("No data available.")
-
-    # --- Min Demand Product ---
-    st.subheader("Min Demand Product (Excluding Zero)")
-    c.execute('''
-        SELECT product_name, SUM(quantity) as total_qty
-        FROM order_products
-        WHERE status = 'Original'
-        GROUP BY product_name
-        HAVING total_qty > 0
-        ORDER BY total_qty ASC
-        LIMIT 1
-    ''')
-    result = c.fetchone()
-    if result:
-        st.info(f"Lowest Demand: {result[0]} with {result[1]} units")
-    else:
-        st.warning("No data available.")
-
-    # --- Sales Graph ---
-    st.subheader("Sales Graph (By Quantity and Amount)")
-    view_by = st.selectbox("View By", ["Quantity", "Amount INR", "Amount USD"], key="reports_view_by")
-
-    if view_by == "Quantity":
+    try:
+        # --- Max Demand Product ---
+        st.subheader("🔥 Highest Demand Product")
         c.execute('''
-            SELECT product_name, SUM(quantity)
+            SELECT product_name, SUM(quantity) as total_kg
             FROM order_products
-            WHERE status IN ('Original', 'Dispatched')
+            WHERE status = 'Original'
+            GROUP BY product_name
+            ORDER BY total_kg DESC
+            LIMIT 1
+        ''')
+        result = c.fetchone()
+        if result:
+            st.success(f"Max Demand: {result[0]} | Total KG: {result[1]}")
+        else:
+            st.warning("No order data available.")
+
+        # --- Min Demand Product ---
+        st.subheader("💤 Lowest Demand Product")
+        c.execute('''
+            SELECT product_name, SUM(quantity) as total_kg
+            FROM order_products
+            WHERE status = 'Original'
+            GROUP BY product_name
+            HAVING total_kg > 0
+            ORDER BY total_kg ASC
+            LIMIT 1
+        ''')
+        result = c.fetchone()
+        if result:
+            st.info(f"Min Demand: {result[0]} | Total KG: {result[1]}")
+        else:
+            st.warning("No order data available.")
+
+        # --- Demand Chart ---
+        st.subheader("📈 Product Demand Chart")
+        view_option = st.selectbox("View By", ["Total KG", "Amount (INR)"])
+
+        if view_option == "Total KG":
+            c.execute('''
+                SELECT product_name, SUM(quantity)
+                FROM order_products
+                WHERE status IN ('Original', 'Dispatched')
+                GROUP BY product_name
+            ''')
+        else:  # Amount (INR)
+            c.execute('''
+                SELECT product_name, SUM(quantity * price_inr)
+                FROM order_products
+                WHERE status IN ('Original', 'Dispatched')
+                GROUP BY product_name
+            ''')
+
+        data = c.fetchall()
+        if data:
+            df = pd.DataFrame(data, columns=["Product", "Value"])
+            fig, ax = plt.subplots()
+            df.set_index("Product")["Value"].plot(kind="bar", ax=ax)
+            ax.set_ylabel(view_option)
+            ax.set_title(f"Product-wise {view_option}")
+            st.pyplot(fig)
+        else:
+            st.warning("No data to display.")
+
+        # --- Dispatched Summary ---
+        st.subheader("🚚 Dispatch Summary")
+        c.execute('''
+            SELECT product_name, SUM(quantity) AS dispatched_kg
+            FROM order_products
+            WHERE status = 'Dispatched'
             GROUP BY product_name
         ''')
-    elif view_by == "Amount INR":
-        c.execute('''
-            SELECT product_name, SUM(quantity * price_inr)
-            FROM order_products
-            WHERE status IN ('Original', 'Dispatched')
-            GROUP BY product_name
-        ''')
-    else:
-        c.execute('''
-            SELECT product_name, SUM(quantity * price_usd)
-            FROM order_products
-            WHERE status IN ('Original', 'Dispatched')
-            GROUP BY product_name
-        ''')
+        dispatched = c.fetchall()
 
-    data = c.fetchall()
-    if data:
-        df = pd.DataFrame(data, columns=['Product Name', 'Total'])
-        fig, ax = plt.subplots()
-        df.set_index('Product Name')['Total'].plot(kind='bar', ax=ax)
-        ax.set_ylabel(view_by)
-        st.pyplot(fig)
-    else:
-        st.warning("No data to display.")
+        if dispatched:
+            st.dataframe(pd.DataFrame(dispatched, columns=["Product", "Dispatched KG"]))
+        else:
+            st.info("No dispatch data available.")
 
-    conn.close()
+    except Exception as e:
+        st.error(f"⚠️ Error loading reports: {e}")
+    finally:
+        safe_close(conn)
 
-    # Return menu and logout (always at the end)
-    return_menu_logout("reports")
+    st.markdown("---")
+    if st.button("🔒 Logout"):
+        st.session_state.clear()
+        st.switch_page("app.py")
 
 def sales_page(admin_view=False):
     show_header()
-    st.markdown(f"### 👋 Welcome back, **{st.session_state['username']}**!")
+    st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
     st.info("You're on the Sales Orders page.")
 
-    username = st.session_state['username']
-
-    # Connect DB
+    username = st.session_state.get('username')
     conn = sqlite3.connect('orders.db')
+    conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
 
-    # --- New Order Form ---
-    st.subheader("Create New Order")
-    customer_name = st.text_input("Customer Name", key="sales_customer_name")
-    order_no = st.text_input("Order Number", key="sales_order_no")
-    order_date = st.date_input("Order Date", datetime.today(), key="sales_order_date")
-    urgent_flag = st.checkbox("Mark as Urgent", key="sales_urgent_flag")
-
-    # Multi-product entry
-    st.write("Enter Products")
-    products = st.data_editor(pd.DataFrame(columns=['Product Name', 'Quantity', 'Unit', 'Price INR', 'Price USD']),
-                              num_rows="dynamic", key="sales_products_editor")
-
-    if st.button("Submit Order", key="sales_submit_order"):
-        c.execute('INSERT INTO orders (created_by, customer_name, order_no, order_date, urgent_flag) VALUES (?, ?, ?, ?, ?)',
-                  (username, customer_name, order_no, str(order_date), int(urgent_flag)))
-        order_id = c.lastrowid
-        for _, row in products.iterrows():
-            if row['Product Name']:
-                c.execute('''
-                    INSERT INTO order_products (order_id, product_name, quantity, unit, price_inr, price_usd, status)
-                    VALUES (?, ?, ?, ?, ?, ?, 'Original')
-                ''', (order_id, row['Product Name'], row['Quantity'], row['Unit'], row['Price INR'], row['Price USD']))
-        conn.commit()
-        st.success("Order Created Successfully!")
-
-    # --- Existing Orders List ---
-    st.subheader("My Orders")
-    c.execute('''
-        SELECT o.order_id, o.customer_name, o.order_no, o.order_date, o.urgent_flag
-        FROM orders o
-        WHERE o.created_by = ?
-        ORDER BY o.order_date DESC
-    ''', (username,))
-    orders = c.fetchall()
-
-    for order in orders:
-        st.markdown(f"### Order No: {order[2]} | Customer: {order[1]} | Date: {order[3]} | Urgent: {'Yes' if order[4] else 'No'}")
-
-        # Fetch products
+    try:
+        # Ensure correct orders table structure
         c.execute('''
-            SELECT order_product_id, product_name, quantity, unit, price_inr, price_usd, status
-            FROM order_products
-            WHERE order_id = ?
-        ''', (order[0],))
-        products = c.fetchall()
-        df = pd.DataFrame(products, columns=['ID', 'Product Name', 'Qty', 'Unit', 'Price INR', 'Price USD', 'Status'])
-        st.dataframe(df)
+            CREATE TABLE IF NOT EXISTS orders (
+                order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_name TEXT,
+                address TEXT,
+                gstin TEXT,
+                order_no TEXT,
+                order_date TEXT,
+                urgent_flag INTEGER,
+                created_by TEXT
+            )
+        ''')
 
-        # Option to edit
-        st.write("Edit Products:")
-        edited = st.data_editor(df[['Product Name', 'Qty', 'Unit', 'Price INR', 'Price USD']],
-                                num_rows="dynamic", key=f"sales_edit_{order[0]}")
-        if st.button(f"Save Edits for Order {order[2]}", key=f"sales_save_edit_{order[0]}"):
-            for idx, row in edited.iterrows():
-                # Insert edited version as new record with 'Edited' status
+        # Ensure correct order_products table structure
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS order_products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id INTEGER,
+                product_name TEXT,
+                quantity INTEGER,
+                unit TEXT,
+                price_inr REAL,
+                price_usd REAL,
+                status TEXT,
+                FOREIGN KEY(order_id) REFERENCES orders(order_id)
+            )
+        ''')
+
+        # --- Buyer Details ---
+        st.subheader("🧾 Buyer Details")
+        customer_name = ""
+        address = ""
+        gstin = ""
+
+        try:
+            buyer_df = pd.read_excel("buyers.xlsx")
+            buyer_df.columns = buyer_df.columns.str.strip()
+            buyer_names = buyer_df["Buyer Name"].dropna().unique().tolist()
+
+            selected_buyer = st.selectbox("Select Buyer (or leave blank to enter manually)", [""] + buyer_names)
+
+            if selected_buyer:
+                buyer_row = buyer_df[buyer_df["Buyer Name"] == selected_buyer].iloc[0]
+                customer_name = selected_buyer
+                address = buyer_row["Address"]
+                gstin = buyer_row["GSTIN/UIN"]
+
+                st.markdown(f"**Address:** {address}")
+                st.markdown(f"**GSTIN:** {gstin}")
+            else:
+                customer_name = st.text_input("Customer Name", key="manual_customer_name")
+                address = st.text_area("Address", key="manual_address")
+                gstin = st.text_input("GSTIN", key="manual_gstin")
+
+        except Exception as e:
+            st.warning(f"⚠️ Could not load buyer Excel file: {e}")
+            customer_name = st.text_input("Customer Name")
+            address = st.text_area("Address")
+            gstin = st.text_input("GSTIN")
+
+        order_no = st.text_input("Order Number", key="sales_order_no")
+        order_date = st.date_input("Order Date", datetime.today(), key="sales_order_date")
+        urgent_flag = st.checkbox("Mark as Urgent", key="sales_urgent_flag")
+
+        # --- Product Entry ---
+        st.write("📦 Enter Products")
+
+        unit_options = ["KG", "Nos"]
+        currency_options = ["INR", "USD"]
+        price_type_options = ["Per Kg", "Per Nos"]
+
+        product_columns = ['Product Name', 'Quantity', 'Unit', 'Currency', 'Price', 'Price Type']
+        product_data = pd.DataFrame(columns=product_columns)
+
+        column_config = {
+            "Unit": st.column_config.SelectboxColumn("Unit", options=unit_options),
+            "Currency": st.column_config.SelectboxColumn("Currency", options=currency_options),
+            "Price Type": st.column_config.SelectboxColumn("Price Type", options=price_type_options),
+        }
+
+        products = st.data_editor(product_data, column_config=column_config, num_rows="dynamic", key="sales_products_editor")
+
+        if not products.empty and 'Quantity' in products.columns and 'Price' in products.columns:
+            try:
+                products['Quantity'] = pd.to_numeric(products['Quantity'], errors='coerce').fillna(0)
+                products['Price'] = pd.to_numeric(products['Price'], errors='coerce').fillna(0)
+                products['Total'] = products['Quantity'] * products['Price']
+            except Exception as e:
+                st.warning(f"Error calculating totals: {e}")
+                products['Total'] = 0.0
+
+        st.write("🔍 Order Summary Preview:")
+        st.data_editor(products, use_container_width=True, key="summary_preview_editor")
+
+        if 'Total' in products:
+            try:
+                grand_total = products['Total'].astype(float).sum()
+                st.markdown(f"### 🧾 Grand Total: ₹ {grand_total:,.2f}")
+            except:
+                grand_total = 0.0
+
+        if st.button("✅ Submit Order", key="sales_submit_order"):
+            if not customer_name.strip() or not order_no.strip():
+                st.warning("Please fill in Customer Name and Order Number.")
+            elif products.empty or products['Product Name'].isnull().all():
+                st.warning("Please enter at least one product.")
+            else:
+                try:
+                    c.execute('''
+                        INSERT INTO orders (created_by, customer_name, order_no, order_date, urgent_flag, address, gstin)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ''', (username, customer_name.strip(), order_no.strip(), str(order_date), int(urgent_flag), address.strip(), gstin.strip()))
+                    order_id = c.lastrowid
+
+                    for _, row in products.iterrows():
+                        if row['Product Name']:
+                            c.execute('''
+                                INSERT INTO order_products (
+                                    order_id, product_name, quantity, unit, price_inr, price_usd, status
+                                )
+                                VALUES (?, ?, ?, ?, ?, ?, 'Original')
+                            ''', (
+                                order_id,
+                                row['Product Name'],
+                                row['Quantity'],
+                                row['Unit'],
+                                row['Price'] if row['Currency'] == "INR" else 0,
+                                row['Price'] if row['Currency'] == "USD" else 0
+                            ))
+
+                    conn.commit()
+                    st.success("✅ Order Created Successfully!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Error saving order: {e}")
+
+        # --- Existing Orders ---
+        st.subheader("📋 My Orders")
+        try:
+            c.execute('''
+                SELECT o.order_id, o.customer_name, o.order_no, o.order_date, o.urgent_flag, o.gstin
+                FROM orders o
+                WHERE o.created_by = ?
+                ORDER BY o.order_date DESC
+            ''', (username,))
+            orders = c.fetchall()
+
+            for order in orders:
+                st.markdown(
+                    f"### Order No: {order[2]} | Customer: {order[1]} | GSTIN: {order[5]} | Date: {order[3]} | Urgent: {'Yes' if order[4] else 'No'}"
+                )
+
                 c.execute('''
-                    INSERT INTO order_products (order_id, product_name, quantity, unit, price_inr, price_usd, status, modified_by, modified_date)
-                    VALUES (?, ?, ?, ?, ?, ?, 'Edited', ?, ?)
-                ''', (order[0], row['Product Name'], row['Qty'], row['Unit'], row['Price INR'], row['Price USD'], username, str(datetime.now())))
-            conn.commit()
-            st.success("Edits saved! Both original and edited will be visible.")
+                    SELECT product_name, quantity, unit, price_inr, price_usd
+                    FROM order_products
+                    WHERE order_id = ? AND status = 'Original'
+                ''', (order[0],))
+                products = c.fetchall()
+                df = pd.DataFrame(products, columns=['Product Name', 'Qty', 'Unit', 'Price INR', 'Price USD'])
 
-    conn.close()
+                st.data_editor(
+                    df,
+                    disabled=True,
+                    use_container_width=True,
+                    key=f"view_table_{order[0]}"
+                )
 
-    # Return menu and logout (always at the end)
+        except Exception as e:
+            st.error(f"⚠️ Error fetching orders: {e}")
+
+    except Exception as e:
+        st.error(f"❌ Error setting up Sales Page: {e}")
+    finally:
+        safe_close(conn)
+
     return_menu_logout("sales")
 
 def dispatch_page(admin_view=False):
     show_header()
-    st.markdown(f"### 👋 Welcome back, **{st.session_state['username']}**!")
+    st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username')}**!")
     st.info("You're on the Dispatch Management page.")
 
-    username = st.session_state['username']
+    username = st.session_state.get('username')
 
-    # Connect DB
     conn = sqlite3.connect('orders.db')
+    conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
 
-    # --- Show Pending & Urgent Orders (FIFO unless urgent) ---
-    st.subheader("Pending & Urgent Orders")
-    c.execute('''
-        SELECT o.order_id, o.customer_name, o.order_no, o.order_date, o.urgent_flag
-        FROM orders o
-        WHERE o.order_id NOT IN (
-            SELECT DISTINCT order_id FROM order_products WHERE status = 'Dispatched'
-        )
-        ORDER BY o.urgent_flag DESC, o.order_date ASC
-    ''')
-    orders = c.fetchall()
-
-    for order in orders:
-        st.markdown(f"### Order No: {order[2]} | Customer: {order[1]} | Date: {order[3]} | Urgent: {'Yes' if order[4] else 'No'}")
-
-        # Fetch products
+    try:
+        # Ensure correct orders table
         c.execute('''
-            SELECT order_product_id, product_name, quantity, unit, price_inr, price_usd, status
-            FROM order_products
-            WHERE order_id = ? AND status = 'Original'
-        ''', (order[0],))
-        products = c.fetchall()
-        df = pd.DataFrame(products, columns=['Order Product ID', 'Product Name', 'Qty', 'Unit', 'Price INR', 'Price USD', 'Status'])
-        st.dataframe(df)
+            CREATE TABLE IF NOT EXISTS orders (
+                order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_name TEXT,
+                address TEXT,
+                gstin TEXT,
+                order_no TEXT,
+                order_date TEXT,
+                urgent_flag INTEGER,
+                created_by TEXT
+            )
+        ''')
 
-        # Dispatch Editor
-        st.write("Dispatch These Products (Adjust Qty if needed):")
-        dispatch_df = st.data_editor(df[['Product Name', 'Qty', 'Unit']], num_rows="dynamic", key=f"dispatch_editor_{order[0]}")
-        remarks = st.text_input(f"Remarks for Order {order[2]}", key=f"remarks_{order[0]}")
+        # Ensure correct order_products table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS order_products (
+                order_product_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id INTEGER,
+                product_name TEXT,
+                quantity INTEGER,
+                unit TEXT,
+                price_inr REAL,
+                price_usd REAL,
+                status TEXT,
+                modified_by TEXT,
+                modified_date TEXT,
+                FOREIGN KEY(order_id) REFERENCES orders(order_id)
+            )
+        ''')
 
-        if st.button(f"Mark Dispatched Order {order[2]}", key=f"dispatch_mark_{order[0]}"):
-            for idx, row in dispatch_df.iterrows():
+        # --- Pending & Urgent Orders ---
+        st.subheader("🚚 Pending & Urgent Orders")
+        try:
+            c.execute('''
+                SELECT o.order_id, o.customer_name, o.address, o.gstin, o.order_no, o.order_date, o.urgent_flag
+                FROM orders o
+                WHERE o.order_id NOT IN (
+                    SELECT DISTINCT order_id FROM order_products WHERE status = 'Dispatched'
+                )
+                ORDER BY o.urgent_flag DESC, o.order_date ASC
+            ''')
+            orders = c.fetchall()
+
+            for order in orders:
+                st.markdown(
+                    f"### Order No: {order[4]} | Customer: {order[1]} | GSTIN: {order[3]} | Address: {order[2]} | "
+                    f"Date: {order[5]} | Urgent: {'Yes' if order[6] else 'No'}"
+                )
+
                 c.execute('''
-                    INSERT INTO order_products (order_id, product_name, quantity, unit, price_inr, price_usd, status, modified_by, modified_date)
-                    VALUES (?, ?, ?, ?, 0, 0, 'Dispatched', ?, ?)
-                ''', (order[0], row['Product Name'], row['Qty'], row['Unit'], username, str(datetime.now())))
-            conn.commit()
-            st.success(f"Order {order[2]} marked as Dispatched. Both versions now visible.")
-            st.rerun()
+                    SELECT op.order_product_id, op.order_id, op.product_name, op.quantity, op.unit,
+                           op.price_inr, op.price_usd, op.status, op.modified_by, op.modified_date
+                    FROM order_products op
+                    WHERE op.order_product_id IN (
+                        SELECT MAX(op2.order_product_id)
+                        FROM order_products op2
+                        WHERE op2.order_id = ? AND op2.status != 'Dispatched'
+                        GROUP BY op2.product_name
+                    )
+                ''', (order[0],))
+                products = c.fetchall()
 
-    # --- Show Dispatched Orders ---
-    st.subheader("Dispatched Orders")
-    c.execute('''
-        SELECT DISTINCT o.order_id, o.customer_name, o.order_no, o.order_date
-        FROM orders o
-        JOIN order_products op ON o.order_id = op.order_id
-        WHERE op.status = 'Dispatched'
-        ORDER BY o.order_date DESC
-    ''')
-    dispatched_orders = c.fetchall()
+                df = pd.DataFrame(products, columns=[
+                    'Order Product ID', 'Order ID', 'Product Name', 'Qty', 'Unit',
+                    'Price INR', 'Price USD', 'Status', 'Modified By', 'Modified Date'
+                ])
 
-    for order in dispatched_orders:
-        st.markdown(f"### Order No: {order[2]} | Customer: {order[1]} | Date: {order[3]}")
+                st.data_editor(df, num_rows="dynamic", use_container_width=True, key=f"view_table_{order[0]}")
 
-        # Show original & dispatched products
-        c.execute('''
-            SELECT product_name, quantity, unit, status, modified_by, modified_date
-            FROM order_products
-            WHERE order_id = ?
-        ''', (order[0],))
-        products = c.fetchall()
-        df = pd.DataFrame(products, columns=['Product Name', 'Qty', 'Unit', 'Status', 'Modified By', 'Modified Date'])
-        st.dataframe(df)
+                # Dispatch input
+                st.write("📝 Dispatch These Products (Adjust Qty if needed):")
+                dispatch_df = st.data_editor(df[['Product Name', 'Qty', 'Unit']], num_rows="dynamic", key=f"dispatch_editor_{order[0]}")
+                remarks = st.text_input(f"Remarks for Order {order[4]}", key=f"remarks_{order[0]}")
 
-    conn.close()
+                if st.button(f"✅ Mark Dispatched Order {order[4]}", key=f"dispatch_mark_{order[0]}"):
+                    try:
+                        for _, row in dispatch_df.iterrows():
+                            if row['Product Name'] and row['Qty'] > 0:
+                                c.execute('''
+                                    INSERT INTO order_products (
+                                        order_id, product_name, quantity, unit, price_inr, price_usd,
+                                        status, modified_by, modified_date
+                                    )
+                                    VALUES (?, ?, ?, ?, 0, 0, 'Dispatched', ?, ?)
+                                ''', (order[0], row['Product Name'], row['Qty'], row['Unit'], username, str(datetime.now())))
+                        conn.commit()
+                        st.success(f"✅ Order {order[4]} marked as Dispatched.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Dispatch failed: {e}")
+        except Exception as e:
+            st.error(f"⚠️ Error loading pending orders: {e}")
 
-    # Return menu and logout (always at the end)
+        # --- Dispatched Orders ---
+        st.subheader("✅ Dispatched Orders")
+        try:
+            c.execute('''
+                SELECT DISTINCT o.order_id, o.customer_name, o.address, o.gstin, o.order_no, o.order_date
+                FROM orders o
+                JOIN order_products op ON o.order_id = op.order_id
+                WHERE op.status = 'Dispatched'
+                ORDER BY o.order_date DESC
+            ''')
+            dispatched_orders = c.fetchall()
+
+            for order in dispatched_orders:
+                st.markdown(
+                    f"### Order No: {order[4]} | Customer: {order[1]} | GSTIN: {order[3]} | Address: {order[2]} | Date: {order[5]}"
+                )
+
+                c.execute('''
+                    SELECT product_name, quantity, unit, status, modified_by, modified_date
+                    FROM order_products
+                    WHERE order_id = ? AND status = 'Dispatched'
+                ''', (order[0],))
+                products = c.fetchall()
+                df = pd.DataFrame(products, columns=[
+                    'Product Name', 'Qty', 'Unit', 'Status', 'Modified By', 'Modified Date'
+                ])
+                st.data_editor(df, num_rows="dynamic", use_container_width=True, key=f"dispatched_table_{order[0]}")
+        except Exception as e:
+            st.error(f"⚠️ Error loading dispatched orders: {e}")
+
+    except Exception as e:
+        st.error(f"❌ Error setting up dispatch page: {e}")
+    finally:
+        safe_close(conn)
+
     return_menu_logout("dispatch")
 
 def admin_page():
     show_header()
-    st.markdown(f"### 👋 Welcome back, **{st.session_state['username']}**!")
+    st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username')}**!")
     st.info("You're on the Admin Panel.")
-    ...
 
+    # --- Create New User ---
     st.subheader("➕ Create New User")
     new_username = st.text_input("Username", key="admin_new_username")
     new_password = st.text_input("Password", type="password", key="admin_new_password")
     new_role = st.selectbox("Role", ["Admin", "Sales", "Dispatch"], key="admin_new_role")
+    new_full_name = st.text_input("Full Name", key="admin_new_fullname")
 
     if st.button("Create User", key="admin_create_user"):
-        conn = sqlite3.connect('users.db')
-        c = conn.cursor()
-        hashed_pw = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt())
-        try:
-            c.execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
-                      (new_username, hashed_pw, new_role))
-            conn.commit()
-            st.success(f"User '{new_username}' created successfully! Password: {new_password}")
-        except sqlite3.IntegrityError:
-            st.error("⚠️ Username already exists.")
-        conn.close()
-        st.rerun()
+        if not new_username.strip() or not new_password or not new_full_name.strip():
+            st.warning("Please enter username, full name, and password.")
+        else:
+            conn = sqlite3.connect('users.db')
+            c = conn.cursor()
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE,
+                    password_hash TEXT,
+                    role TEXT,
+                    full_name TEXT
+                )
+            ''')
+            hashed_pw = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt())
+            try:
+                c.execute('''
+                    INSERT INTO users (username, password_hash, role, full_name)
+                    VALUES (?, ?, ?, ?)
+                ''', (new_username.strip(), hashed_pw, new_role, new_full_name.strip()))
+                conn.commit()
+                st.success(f"✅ User '{new_username}' ({new_full_name}) created successfully!")
+            except sqlite3.IntegrityError:
+                st.error("⚠️ Username already exists.")
+            safe_close(conn)
+            st.rerun()
 
+    # --- Manage Existing Users ---
     st.markdown("---")
     st.subheader("👥 Manage Existing Users")
-
-    # Load users WITH password hash
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    c.execute("SELECT user_id, username, role FROM users ORDER BY user_id")
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE,
+            password_hash TEXT,
+            role TEXT,
+            full_name TEXT
+        )
+    ''')
+    c.execute("SELECT user_id, username, role, full_name FROM users ORDER BY user_id")
     users = c.fetchall()
 
-    for user_id, username, role in users:
+    for user_id, username, role, full_name in users:
         col1, col2, col3 = st.columns([3, 3, 4])
-
-        # --- Column 1: User Info ---
         with col1:
-            st.markdown(f"**{username}**  \n_Role_: {role}")
+            st.markdown(f"**{username}**  \n_Full Name_: {full_name}  \n_Role_: {role}")
 
-        # --- Column 2: Role Editor ---
         with col2:
             new_role = st.selectbox("Change Role", ["Admin", "Sales", "Dispatch"],
                                     index=["Admin", "Sales", "Dispatch"].index(role),
@@ -377,7 +596,6 @@ def admin_page():
                     st.success(f"Role updated for {username} to {new_role}")
                     st.rerun()
 
-        # --- Column 3: Reset Password & Delete ---
         with col3:
             new_pw = st.text_input(f"New Password for {username}", type="password", key=f"new_pw_{user_id}")
             if new_pw:
@@ -387,7 +605,6 @@ def admin_page():
                     conn.commit()
                     st.success(f"Password reset for '{username}' to: {new_pw}")
                     st.rerun()
-
             if username != "admin":
                 if st.button("❌ Delete", key=f"delete_{user_id}"):
                     c.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
@@ -395,10 +612,13 @@ def admin_page():
                     st.warning(f"User '{username}' deleted.")
                     st.rerun()
 
-    conn.close()
+    safe_close(conn)
+    st.markdown("---")
     return_menu_logout("admin")
 
 def main_app():
+    st.sidebar.write("📁 DB Path:")
+    st.sidebar.write(os.path.abspath("orders.db"))
     st.sidebar.title("Navigation")
     if st.session_state['role'] == 'Admin':
         page = st.sidebar.radio("Go to", ["Admin", "Sales Orders", "Dispatch", "Reports"])
@@ -438,6 +658,10 @@ if __name__ == '__main__':
             sales_page(admin_view=True)
         elif st.session_state['page'] == 'Reports':
             reports_page()
+
+
+
+
 
 
 

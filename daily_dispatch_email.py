@@ -17,7 +17,7 @@ def send_email_with_pdf(pdf_file, sender, password, recipient, subject, body):
     part['Content-Disposition'] = f'attachment; filename="{pdf_file}"'
     msg.attach(part)
 
-    server = smtplib.SMTP('smtp.mail.yahoo.com', 587)
+    server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
     server.login(sender, password)
     server.send_message(msg)
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         msg["To"] = recipient
         msg["Subject"] = "📭 No Dispatch Today"
 
-        server = smtplib.SMTP('smtp.mail.yahoo.com', 587)
+        server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
         server.login(sender, password)
         server.send_message(msg)
