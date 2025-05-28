@@ -95,6 +95,8 @@ def main_menu():
         st.rerun()
 
 def reports_page():
+    show_header()
+
     st.title("📊 Reports and Analytics")
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
     st.info("Track demand, dispatched summary, and performance insights.")
@@ -192,8 +194,10 @@ def reports_page():
         st.session_state['page'] = 'Main Menu'
         st.rerun()
 
+        return_menu_logout("reports")
 
 def sales_page(admin_view=False):
+    show_header()
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
     st.info("You're on the Sales Orders page.")
 
@@ -354,6 +358,8 @@ def sales_page(admin_view=False):
         st.error(f"⚠️ Error fetching orders: {e}")
 
     conn.close()
+
+    return_menu_logout("sales")
 
 def dispatch_page(admin_view=False):
     show_header()
