@@ -194,7 +194,7 @@ def reports_page():
         st.session_state['page'] = 'Main Menu'
         st.rerun()
 
-        return_menu_logout("reports")
+        return_menu_logout("reports")  # ✅ Add return to main menu + logout
 
 def sales_page(admin_view=False):
     show_header()# ✅ Show logo and company name
