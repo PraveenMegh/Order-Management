@@ -55,7 +55,7 @@ def login_page():
             st.session_state['role'] = result[2]
             st.session_state['full_name'] = result[3]
             st.session_state['page'] = 'Main Menu'
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Invalid credentials")
 
@@ -68,31 +68,31 @@ def main_menu():
     if st.session_state['role'] == 'Admin':
         if st.button("🔧 Admin Panel", key="admin_panel_btn"):
             st.session_state['page'] = 'Admin Panel'
-            st.experimental_rerun()
+            st.rerun()
         if st.button("📦 All Orders", key="all_orders_btn"):
             st.session_state['page'] = 'Orders'
-            st.experimental_rerun()
+            st.rerun()
         if st.button("📦 All Dispatch", key="all_dispatch_btn"):
             st.session_state['page'] = 'Dispatch'
-            st.experimental_rerun()
+            st.rerun()
         if st.button("📊 Reports", key="reports_btn"):
             st.session_state['page'] = 'Reports'
-            st.experimental_rerun()
+            st.rerun()
 
     elif st.session_state['role'] == 'Sales':
         if st.button("📦 Orders Page", key="orders_page_btn"):
             st.session_state['page'] = 'Orders'
-            st.experimental_rerun()
+            st.rerun()
 
     elif st.session_state['role'] == 'Dispatch':
         if st.button("📦 Dispatch Page", key="dispatch_page_btn"):
             st.session_state['page'] = 'Dispatch'
-            st.experimental_rerun()
+            st.rerun()
 
     st.markdown("---")
     if st.button("🔒 Logout", key="logout_main"):
         st.session_state['logged_in'] = False
-        st.experimental_rerun()
+        st.rerun()
 
 def reports_page():
     show_header()# ✅ Show logo and company name
@@ -192,7 +192,8 @@ def reports_page():
     if st.button("🔒 Logout"):
         st.session_state.clear()
         st.session_state['page'] = 'Main Menu'
-        st.experimental_rerun()
+        st.rerun()
+
         return_menu_logout("reports")  # ✅ Add return to main menu + logout
 
 def sales_page(admin_view=False):
@@ -318,7 +319,7 @@ def sales_page(admin_view=False):
 
                 conn.commit()
                 st.success("✅ Order Created Successfully!")
-                st.experimental_rerun()
+                st.rerun()
             except Exception as e:
                 st.error(f"❌ Error saving order: {e}")
 
@@ -460,7 +461,7 @@ def dispatch_page(admin_view=False):
                                 ''', (order[0], row['Product Name'], row['Qty'], row['Unit'], username, str(datetime.now())))
                         conn.commit()
                         st.success(f"✅ Order {order[4]} marked as Dispatched.")
-                        st.experimental_rerun()
+                        st.rerun()
                     except Exception as e:
                         st.error(f"❌ Dispatch failed: {e}")
         except Exception as e:
@@ -541,7 +542,7 @@ def admin_page():
             except sqlite3.IntegrityError:
                 st.error("⚠️ Username already exists.")
             safe_close(conn)
-            st.experimental_rerun()
+            st.rerun()
 
     # --- Manage Existing Users ---
     st.markdown("---")
@@ -574,7 +575,7 @@ def admin_page():
                     c.execute("UPDATE users SET role = ? WHERE user_id = ?", (new_role, user_id))
                     conn.commit()
                     st.success(f"Role updated for {username} to {new_role}")
-                    st.experimental_rerun()
+                    st.rerun()
 
         with col3:
             new_pw = st.text_input(f"New Password for {username}", type="password", key=f"new_pw_{user_id}")
@@ -584,13 +585,13 @@ def admin_page():
                     c.execute("UPDATE users SET password_hash = ? WHERE user_id = ?", (hashed_pw, user_id))
                     conn.commit()
                     st.success(f"Password reset for '{username}' to: {new_pw}")
-                    st.experimental_rerun()
+                    st.rerun()
             if username != "admin":
                 if st.button("❌ Delete", key=f"delete_{user_id}"):
                     c.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
                     conn.commit()
                     st.warning(f"User '{username}' deleted.")
-                    st.experimental_rerun()
+                    st.rerun()
 
     safe_close(conn)
     st.markdown("---")
