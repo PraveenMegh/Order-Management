@@ -189,7 +189,9 @@ def reports_page():
     st.markdown("---")
     if st.button("🔒 Logout"):
         st.session_state.clear()
-        st.switch_page("app.py")
+        st.session_state['page'] = 'Main Menu'
+        st.rerun()
+
 
 def sales_page(admin_view=False):
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
