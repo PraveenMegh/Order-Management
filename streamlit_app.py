@@ -95,10 +95,10 @@ def main_menu():
         st.rerun()
 
 def reports_page():
-    show_header()
-
-    st.title("📊 Reports and Analytics")
+    show_header()# ✅ Show logo and company name
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
+    st.title("📊 Reports and Analytics")
+    
     st.info("Track demand, dispatched summary, and performance insights.")
 
     conn = sqlite3.connect("orders.db")
@@ -197,7 +197,7 @@ def reports_page():
         return_menu_logout("reports")
 
 def sales_page(admin_view=False):
-    show_header()
+    show_header()# ✅ Show logo and company name
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
     st.info("You're on the Sales Orders page.")
 
