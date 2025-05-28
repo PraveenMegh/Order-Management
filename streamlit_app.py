@@ -192,7 +192,6 @@ def reports_page():
         st.switch_page("app.py")
 
 def sales_page(admin_view=False):
-    show_header()
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
     st.info("You're on the Sales Orders page.")
 
@@ -201,46 +200,20 @@ def sales_page(admin_view=False):
     conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
 
-    try:
-        # Ensure correct orders table structure
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS orders (
-                order_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                customer_name TEXT,
-                address TEXT,
-                gstin TEXT,
-                order_no TEXT,
-                order_date TEXT,
-                urgent_flag INTEGER,
-                created_by TEXT
-            )
-        ''')
+    # --- Buyer Details ---
+    st.subheader("🧾 Buyer Details")
+    customer_name = ""
+    address = ""
+    gstin = ""
 
-        # Ensure correct order_products table structure
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS order_products (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                order_id INTEGER,
-                product_name TEXT,
-                quantity INTEGER,
-                unit TEXT,
-                price_inr REAL,
-                price_usd REAL,
-                status TEXT,
-                FOREIGN KEY(order_id) REFERENCES orders(order_id)
-            )
-        ''')
+    uploaded_file = st.file_uploader("Upload Buyer Excel File", type=["xlsx"])
 
-        # --- Buyer Details ---
-        st.subheader("🧾 Buyer Details")
-        customer_name = ""
-        address = ""
-        gstin = ""
-
+    if uploaded_file is not None:
         try:
-            buyer_df = pd.read_excel("buyers.xlsx")
+            buyer_df = pd.read_excel(uploaded_file, engine='openpyxl')
             buyer_df.columns = buyer_df.columns.str.strip()
             buyer_names = buyer_df["Buyer Name"].dropna().unique().tolist()
+            st.write("Uploaded columns:", list(buyer_df.columns))  # Debug output
 
             selected_buyer = st.selectbox("Select Buyer (or leave blank to enter manually)", [""] + buyer_names)
 
@@ -258,127 +231,127 @@ def sales_page(admin_view=False):
                 gstin = st.text_input("GSTIN", key="manual_gstin")
 
         except Exception as e:
-            st.warning(f"⚠️ Could not load buyer Excel file: {e}")
+            st.warning(f"⚠️ Could not read uploaded Excel file: {e}")
             customer_name = st.text_input("Customer Name")
             address = st.text_area("Address")
-            gstin = st.text_input("GSTIN")
+            gstin = st.text_input("GSTIN/UIN")
+    else:
+        st.info("📂 Please upload the 'buyers.xlsx' file to proceed.")
+        customer_name = st.text_input("Customer Name")
+        address = st.text_area("Address")
+        gstin = st.text_input("GSTIN/UIN")
 
-        order_no = st.text_input("Order Number", key="sales_order_no")
-        order_date = st.date_input("Order Date", datetime.today(), key="sales_order_date")
-        urgent_flag = st.checkbox("Mark as Urgent", key="sales_urgent_flag")
+    order_no = st.text_input("Order Number", key="sales_order_no")
+    order_date = st.date_input("Order Date", datetime.today(), key="sales_order_date")
+    urgent_flag = st.checkbox("Mark as Urgent", key="sales_urgent_flag")
 
-        # --- Product Entry ---
-        st.write("📦 Enter Products")
+    # --- Product Entry ---
+    st.write("📦 Enter Products")
 
-        unit_options = ["KG", "Nos"]
-        currency_options = ["INR", "USD"]
-        price_type_options = ["Per Kg", "Per Nos"]
+    unit_options = ["KG", "Nos"]
+    currency_options = ["INR", "USD"]
+    price_type_options = ["Per Kg", "Per Nos"]
 
-        product_columns = ['Product Name', 'Quantity', 'Unit', 'Currency', 'Price', 'Price Type']
-        product_data = pd.DataFrame(columns=product_columns)
+    product_columns = ['Product Name', 'Quantity', 'Unit', 'Currency', 'Price', 'Price Type']
+    product_data = pd.DataFrame(columns=product_columns)
 
-        column_config = {
-            "Unit": st.column_config.SelectboxColumn("Unit", options=unit_options),
-            "Currency": st.column_config.SelectboxColumn("Currency", options=currency_options),
-            "Price Type": st.column_config.SelectboxColumn("Price Type", options=price_type_options),
-        }
+    column_config = {
+        "Unit": st.column_config.SelectboxColumn("Unit", options=unit_options),
+        "Currency": st.column_config.SelectboxColumn("Currency", options=currency_options),
+        "Price Type": st.column_config.SelectboxColumn("Price Type", options=price_type_options),
+    }
 
-        products = st.data_editor(product_data, column_config=column_config, num_rows="dynamic", key="sales_products_editor")
+    products = st.data_editor(product_data, column_config=column_config, num_rows="dynamic", key="sales_products_editor")
 
-        if not products.empty and 'Quantity' in products.columns and 'Price' in products.columns:
-            try:
-                products['Quantity'] = pd.to_numeric(products['Quantity'], errors='coerce').fillna(0)
-                products['Price'] = pd.to_numeric(products['Price'], errors='coerce').fillna(0)
-                products['Total'] = products['Quantity'] * products['Price']
-            except Exception as e:
-                st.warning(f"Error calculating totals: {e}")
-                products['Total'] = 0.0
-
-        st.write("🔍 Order Summary Preview:")
-        st.data_editor(products, use_container_width=True, key="summary_preview_editor")
-
-        if 'Total' in products:
-            try:
-                grand_total = products['Total'].astype(float).sum()
-                st.markdown(f"### 🧾 Grand Total: ₹ {grand_total:,.2f}")
-            except:
-                grand_total = 0.0
-
-        if st.button("✅ Submit Order", key="sales_submit_order"):
-            if not customer_name.strip() or not order_no.strip():
-                st.warning("Please fill in Customer Name and Order Number.")
-            elif products.empty or products['Product Name'].isnull().all():
-                st.warning("Please enter at least one product.")
-            else:
-                try:
-                    c.execute('''
-                        INSERT INTO orders (created_by, customer_name, order_no, order_date, urgent_flag, address, gstin)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ''', (username, customer_name.strip(), order_no.strip(), str(order_date), int(urgent_flag), address.strip(), gstin.strip()))
-                    order_id = c.lastrowid
-
-                    for _, row in products.iterrows():
-                        if row['Product Name']:
-                            c.execute('''
-                                INSERT INTO order_products (
-                                    order_id, product_name, quantity, unit, price_inr, price_usd, status
-                                )
-                                VALUES (?, ?, ?, ?, ?, ?, 'Original')
-                            ''', (
-                                order_id,
-                                row['Product Name'],
-                                row['Quantity'],
-                                row['Unit'],
-                                row['Price'] if row['Currency'] == "INR" else 0,
-                                row['Price'] if row['Currency'] == "USD" else 0
-                            ))
-
-                    conn.commit()
-                    st.success("✅ Order Created Successfully!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ Error saving order: {e}")
-
-        # --- Existing Orders ---
-        st.subheader("📋 My Orders")
+    if not products.empty and 'Quantity' in products.columns and 'Price' in products.columns:
         try:
-            c.execute('''
-                SELECT o.order_id, o.customer_name, o.order_no, o.order_date, o.urgent_flag, o.gstin
-                FROM orders o
-                WHERE o.created_by = ?
-                ORDER BY o.order_date DESC
-            ''', (username,))
-            orders = c.fetchall()
-
-            for order in orders:
-                st.markdown(
-                    f"### Order No: {order[2]} | Customer: {order[1]} | GSTIN: {order[5]} | Date: {order[3]} | Urgent: {'Yes' if order[4] else 'No'}"
-                )
-
-                c.execute('''
-                    SELECT product_name, quantity, unit, price_inr, price_usd
-                    FROM order_products
-                    WHERE order_id = ? AND status = 'Original'
-                ''', (order[0],))
-                products = c.fetchall()
-                df = pd.DataFrame(products, columns=['Product Name', 'Qty', 'Unit', 'Price INR', 'Price USD'])
-
-                st.data_editor(
-                    df,
-                    disabled=True,
-                    use_container_width=True,
-                    key=f"view_table_{order[0]}"
-                )
-
+            products['Quantity'] = pd.to_numeric(products['Quantity'], errors='coerce').fillna(0)
+            products['Price'] = pd.to_numeric(products['Price'], errors='coerce').fillna(0)
+            products['Total'] = products['Quantity'] * products['Price']
         except Exception as e:
-            st.error(f"⚠️ Error fetching orders: {e}")
+            st.warning(f"Error calculating totals: {e}")
+            products['Total'] = 0.0
+
+    st.write("🔍 Order Summary Preview:")
+    st.data_editor(products, use_container_width=True, key="summary_preview_editor")
+
+    if 'Total' in products:
+        try:
+            grand_total = products['Total'].astype(float).sum()
+            st.markdown(f"### 🧾 Grand Total: ₹ {grand_total:,.2f}")
+        except:
+            grand_total = 0.0
+
+    if st.button("✅ Submit Order", key="sales_submit_order"):
+        if not customer_name.strip() or not order_no.strip():
+            st.warning("Please fill in Customer Name and Order Number.")
+        elif products.empty or products['Product Name'].isnull().all():
+            st.warning("Please enter at least one product.")
+        else:
+            try:
+                c.execute('''
+                    INSERT INTO orders (created_by, customer_name, order_no, order_date, urgent_flag, address, gstin)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (username, customer_name.strip(), order_no.strip(), str(order_date), int(urgent_flag), address.strip(), gstin.strip()))
+                order_id = c.lastrowid
+
+                for _, row in products.iterrows():
+                    if row['Product Name']:
+                        c.execute('''
+                            INSERT INTO order_products (
+                                order_id, product_name, quantity, unit, price_inr, price_usd, status
+                            )
+                            VALUES (?, ?, ?, ?, ?, ?, 'Original')
+                        ''', (
+                            order_id,
+                            row['Product Name'],
+                            row['Quantity'],
+                            row['Unit'],
+                            row['Price'] if row['Currency'] == "INR" else 0,
+                            row['Price'] if row['Currency'] == "USD" else 0
+                        ))
+
+                conn.commit()
+                st.success("✅ Order Created Successfully!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Error saving order: {e}")
+
+    # --- Existing Orders ---
+    st.subheader("📋 My Orders")
+    try:
+        c.execute('''
+            SELECT o.order_id, o.customer_name, o.order_no, o.order_date, o.urgent_flag, o.gstin
+            FROM orders o
+            WHERE o.created_by = ?
+            ORDER BY o.order_date DESC
+        ''', (username,))
+        orders = c.fetchall()
+
+        for order in orders:
+            st.markdown(
+                f"### Order No: {order[2]} | Customer: {order[1]} | GSTIN: {order[5]} | Date: {order[3]} | Urgent: {'Yes' if order[4] else 'No'}"
+            )
+
+            c.execute('''
+                SELECT product_name, quantity, unit, price_inr, price_usd
+                FROM order_products
+                WHERE order_id = ? AND status = 'Original'
+            ''', (order[0],))
+            products = c.fetchall()
+            df = pd.DataFrame(products, columns=['Product Name', 'Qty', 'Unit', 'Price INR', 'Price USD'])
+
+            st.data_editor(
+                df,
+                disabled=True,
+                use_container_width=True,
+                key=f"view_table_{order[0]}"
+            )
 
     except Exception as e:
-        st.error(f"❌ Error setting up Sales Page: {e}")
-    finally:
-        safe_close(conn)
+        st.error(f"⚠️ Error fetching orders: {e}")
 
-    return_menu_logout("sales")
+    conn.close()
 
 def dispatch_page(admin_view=False):
     show_header()
