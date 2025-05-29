@@ -197,10 +197,6 @@ def reports_page():
         return_menu_logout("reports")  # ✅ Add return to main menu + logout
 
 def sales_page(admin_view=False):
-    import os
-    from datetime import datetime
-    import pandas as pd
-
     show_header()
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
     st.info("You're on the Sales Orders page.")
@@ -256,7 +252,6 @@ def sales_page(admin_view=False):
         address = st.text_area("Address", key="manual_address")
         gstin = st.text_input("GSTIN", key="manual_gstin")
 
-    # --- Order Info ---
     # --- Auto-generate Order Number ---
     c.execute("SELECT order_no FROM orders ORDER BY order_id DESC LIMIT 1")
     last_order = c.fetchone()
@@ -268,13 +263,13 @@ def sales_page(admin_view=False):
     else:
         last_num = 0
 
-new_order_no = f"ORD-{last_num + 1:04d}"
-st.markdown(f"### 🆕 Auto-Generated Order Number: `{new_order_no}`")
+    new_order_no = f"ORD-{last_num + 1:04d}"
+    st.markdown(f"### 🆕 Auto-Generated Order Number: `{new_order_no}`")
 
-    # --- Order Info ---
+    order_no = new_order_no
     order_date = st.date_input("Order Date", datetime.today(), key="sales_order_date")
     urgent_flag = st.checkbox("Mark as Urgent", key="sales_urgent_flag")
-    
+
     # --- Product Entry ---
     st.write("📦 Enter Products")
     unit_options = ["KG", "Nos"]
@@ -315,7 +310,7 @@ st.markdown(f"### 🆕 Auto-Generated Order Number: `{new_order_no}`")
     if st.button("✅ Submit Order", key="sales_submit_order"):
         if not customer_name.strip():
             st.warning("Please fill in Customer Name.")
-            elif products.empty or products['Product Name'].isnull().all():
+        elif products.empty or products['Product Name'].isnull().all():
             st.warning("Please enter at least one product.")
         else:
             try:
