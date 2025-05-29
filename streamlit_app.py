@@ -4,6 +4,7 @@ import bcrypt
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
+from common import show_header, return_menu_logout  # if used
 import os
 
 # --- Safe DB close helper ---
@@ -197,7 +198,7 @@ def reports_page():
         return_menu_logout("reports")  # ✅ Add return to main menu + logout
 
 def sales_page(admin_view=False):
-    show_header()# ✅ Show logo and company name
+    show_header()
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
     st.info("You're on the Sales Orders page.")
 
@@ -206,61 +207,65 @@ def sales_page(admin_view=False):
     conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
 
-    # --- Buyer Details ---
+    # --- Buyer Excel Upload (Optional for Admins) ---
+    if st.session_state['role'] == 'Admin':
+        uploaded_file = st.file_uploader("Upload Buyer Excel File", type=["xlsx"])
+        if uploaded_file is not None:
+            with open("buyers.xlsx", "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            st.success("✅ Buyer file uploaded and saved as 'buyers.xlsx'")
+
+    # --- Load Buyer File if Exists ---
+    buyer_df = None
+    if os.path.exists("buyers.xlsx"):
+        try:
+            buyer_df = pd.read_excel("buyers.xlsx", engine='openpyxl')
+            buyer_df.columns = buyer_df.columns.str.strip()
+            buyer_names = buyer_df["Buyer Name"].dropna().unique().tolist()
+        except Exception as e:
+            st.warning(f"⚠️ Error reading buyers.xlsx: {e}")
+            buyer_df = None
+    else:
+        st.info("📂 No buyer master found. Please upload 'buyers.xlsx' to enable buyer autofill.")
+
+    # --- Buyer Details Form ---
     st.subheader("🧾 Buyer Details")
     customer_name = ""
     address = ""
     gstin = ""
 
-    uploaded_file = st.file_uploader("Upload Buyer Excel File", type=["xlsx"])
+    if buyer_df is not None:
+        selected_buyer = st.selectbox("Select Buyer (or leave blank to enter manually)", [""] + buyer_names)
+        if selected_buyer:
+            buyer_row = buyer_df[buyer_df["Buyer Name"] == selected_buyer].iloc[0]
+            customer_name = selected_buyer
+            address = buyer_row["Address"]
+            gstin = buyer_row["GSTIN/UIN"]
 
-    if uploaded_file is not None:
-        try:
-            buyer_df = pd.read_excel(uploaded_file, engine='openpyxl')
-            buyer_df.columns = buyer_df.columns.str.strip()
-            buyer_names = buyer_df["Buyer Name"].dropna().unique().tolist()
-            st.write("Uploaded columns:", list(buyer_df.columns))  # Debug output
-
-            selected_buyer = st.selectbox("Select Buyer (or leave blank to enter manually)", [""] + buyer_names)
-
-            if selected_buyer:
-                buyer_row = buyer_df[buyer_df["Buyer Name"] == selected_buyer].iloc[0]
-                customer_name = selected_buyer
-                address = buyer_row["Address"]
-                gstin = buyer_row["GSTIN/UIN"]
-
-                st.markdown(f"**Address:** {address}")
-                st.markdown(f"**GSTIN:** {gstin}")
-            else:
-                customer_name = st.text_input("Customer Name", key="manual_customer_name")
-                address = st.text_area("Address", key="manual_address")
-                gstin = st.text_input("GSTIN", key="manual_gstin")
-
-        except Exception as e:
-            st.warning(f"⚠️ Could not read uploaded Excel file: {e}")
-            customer_name = st.text_input("Customer Name")
-            address = st.text_area("Address")
-            gstin = st.text_input("GSTIN/UIN")
+            st.markdown(f"**Address:** {address}")
+            st.markdown(f"**GSTIN:** {gstin}")
+        else:
+            customer_name = st.text_input("Customer Name", key="manual_customer_name")
+            address = st.text_area("Address", key="manual_address")
+            gstin = st.text_input("GSTIN", key="manual_gstin")
     else:
-        st.info("📂 Please upload the 'buyers.xlsx' file to proceed.")
-        customer_name = st.text_input("Customer Name")
-        address = st.text_area("Address")
-        gstin = st.text_input("GSTIN/UIN")
+        customer_name = st.text_input("Customer Name", key="manual_customer_name")
+        address = st.text_area("Address", key="manual_address")
+        gstin = st.text_input("GSTIN", key="manual_gstin")
 
+    # --- Order Info ---
     order_no = st.text_input("Order Number", key="sales_order_no")
     order_date = st.date_input("Order Date", datetime.today(), key="sales_order_date")
     urgent_flag = st.checkbox("Mark as Urgent", key="sales_urgent_flag")
 
     # --- Product Entry ---
     st.write("📦 Enter Products")
-
     unit_options = ["KG", "Nos"]
     currency_options = ["INR", "USD"]
     price_type_options = ["Per Kg", "Per Nos"]
 
     product_columns = ['Product Name', 'Quantity', 'Unit', 'Currency', 'Price', 'Price Type']
     product_data = pd.DataFrame(columns=product_columns)
-
     column_config = {
         "Unit": st.column_config.SelectboxColumn("Unit", options=unit_options),
         "Currency": st.column_config.SelectboxColumn("Currency", options=currency_options),
@@ -281,13 +286,15 @@ def sales_page(admin_view=False):
     st.write("🔍 Order Summary Preview:")
     st.data_editor(products, use_container_width=True, key="summary_preview_editor")
 
+    grand_total = 0.0
     if 'Total' in products:
         try:
             grand_total = products['Total'].astype(float).sum()
             st.markdown(f"### 🧾 Grand Total: ₹ {grand_total:,.2f}")
         except:
-            grand_total = 0.0
+            pass
 
+    # --- Submit Order ---
     if st.button("✅ Submit Order", key="sales_submit_order"):
         if not customer_name.strip() or not order_no.strip():
             st.warning("Please fill in Customer Name and Order Number.")
@@ -323,7 +330,7 @@ def sales_page(admin_view=False):
             except Exception as e:
                 st.error(f"❌ Error saving order: {e}")
 
-    # --- Existing Orders ---
+    # --- Existing Orders List ---
     st.subheader("📋 My Orders")
     try:
         c.execute('''
@@ -338,7 +345,6 @@ def sales_page(admin_view=False):
             st.markdown(
                 f"### Order No: {order[2]} | Customer: {order[1]} | GSTIN: {order[5]} | Date: {order[3]} | Urgent: {'Yes' if order[4] else 'No'}"
             )
-
             c.execute('''
                 SELECT product_name, quantity, unit, price_inr, price_usd
                 FROM order_products
@@ -347,18 +353,12 @@ def sales_page(admin_view=False):
             products = c.fetchall()
             df = pd.DataFrame(products, columns=['Product Name', 'Qty', 'Unit', 'Price INR', 'Price USD'])
 
-            st.data_editor(
-                df,
-                disabled=True,
-                use_container_width=True,
-                key=f"view_table_{order[0]}"
-            )
+            st.data_editor(df, disabled=True, use_container_width=True, key=f"view_table_{order[0]}")
 
     except Exception as e:
         st.error(f"⚠️ Error fetching orders: {e}")
 
     conn.close()
-
     return_menu_logout("sales")
 
 def dispatch_page(admin_view=False):
