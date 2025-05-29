@@ -272,7 +272,6 @@ new_order_no = f"ORD-{last_num + 1:04d}"
 st.markdown(f"### 🆕 Auto-Generated Order Number: `{new_order_no}`")
 
     # --- Order Info ---
-    order_no = st.text_input("Order Number", key="sales_order_no")
     order_date = st.date_input("Order Date", datetime.today(), key="sales_order_date")
     urgent_flag = st.checkbox("Mark as Urgent", key="sales_urgent_flag")
     
