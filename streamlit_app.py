@@ -525,44 +525,7 @@ def admin_page():
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username')}**!")
     st.info("You're on the Admin Panel.")
 
-    # --- Create New User ---
-    st.subheader("➕ Create New User")
-    new_username = st.text_input("Username", key="admin_new_username")
-    new_password = st.text_input("Password", type="password", key="admin_new_password")
-    new_role = st.selectbox("Role", ["Admin", "Sales", "Dispatch"], key="admin_new_role")
-    new_full_name = st.text_input("Full Name", key="admin_new_fullname")
-
-    if st.button("Create User", key="admin_create_user"):
-        if not new_username.strip() or not new_password or not new_full_name.strip():
-            st.warning("Please enter username, full name, and password.")
-        else:
-            conn = sqlite3.connect('users.db')
-            c = conn.cursor()
-            c.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE,
-                    password_hash TEXT,
-                    role TEXT,
-                    full_name TEXT
-                )
-            ''')
-            hashed_pw = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt())
-            try:
-                c.execute('''
-                    INSERT INTO users (username, password_hash, role, full_name)
-                    VALUES (?, ?, ?, ?)
-                ''', (new_username.strip(), hashed_pw, new_role, new_full_name.strip()))
-                conn.commit()
-                st.success(f"✅ User '{new_username}' ({new_full_name}) created successfully!")
-            except sqlite3.IntegrityError:
-                st.error("⚠️ Username already exists.")
-            safe_close(conn)
-            st.rerun()
-
-    # --- Manage Existing Users ---
-    st.markdown("---")
-    st.subheader("👥 Manage Existing Users")
+    # --- Ensure Users Table Exists ---
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
     c.execute('''
@@ -574,6 +537,34 @@ def admin_page():
             full_name TEXT
         )
     ''')
+    conn.commit()
+
+    # --- Create New User ---
+    st.subheader("➕ Create New User")
+    new_username = st.text_input("Username", key="admin_new_username")
+    new_password = st.text_input("Password", type="password", key="admin_new_password")
+    new_role = st.selectbox("Role", ["Admin", "Sales", "Dispatch"], key="admin_new_role")
+    new_full_name = st.text_input("Full Name", key="admin_new_fullname")
+
+    if st.button("Create User", key="admin_create_user"):
+        if not new_username.strip() or not new_password or not new_full_name.strip():
+            st.warning("Please enter username, full name, and password.")
+        else:
+            hashed_pw = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt())
+            try:
+                c.execute('''
+                    INSERT INTO users (username, password_hash, role, full_name)
+                    VALUES (?, ?, ?, ?)
+                ''', (new_username.strip(), hashed_pw, new_role, new_full_name.strip()))
+                conn.commit()
+                st.success(f"✅ User '{new_username}' ({new_full_name}) created successfully!")
+                st.rerun()
+            except sqlite3.IntegrityError:
+                st.error("⚠️ Username already exists.")
+
+    # --- Manage Existing Users ---
+    st.markdown("---")
+    st.subheader("👥 Manage Existing Users")
     c.execute("SELECT user_id, username, role, full_name FROM users ORDER BY user_id")
     users = c.fetchall()
 
@@ -600,7 +591,7 @@ def admin_page():
                     hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
                     c.execute("UPDATE users SET password_hash = ? WHERE user_id = ?", (hashed_pw, user_id))
                     conn.commit()
-                    st.success(f"Password reset for '{username}' to: {new_pw}")
+                    st.success(f"Password reset for '{username}'")
                     st.rerun()
             if username != "admin":
                 if st.button("❌ Delete", key=f"delete_{user_id}"):
@@ -609,7 +600,7 @@ def admin_page():
                     st.warning(f"User '{username}' deleted.")
                     st.rerun()
 
-    safe_close(conn)
+    conn.close()
     st.markdown("---")
     return_menu_logout("admin")
 
