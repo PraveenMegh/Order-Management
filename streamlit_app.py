@@ -312,9 +312,9 @@ st.markdown(f"### 🆕 Auto-Generated Order Number: `{new_order_no}`")
 
     # --- Submit Order ---
     if st.button("✅ Submit Order", key="sales_submit_order"):
-        if not customer_name.strip() or not order_no.strip():
-            st.warning("Please fill in Customer Name and Order Number.")
-        elif products.empty or products['Product Name'].isnull().all():
+        if not customer_name.strip():
+            st.warning("Please fill in Customer Name.")
+            elif products.empty or products['Product Name'].isnull().all():
             st.warning("Please enter at least one product.")
         else:
             try:
