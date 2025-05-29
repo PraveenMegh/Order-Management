@@ -4,7 +4,6 @@ import bcrypt
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
-from common import show_header, return_menu_logout  # if used
 import os
 
 # --- Safe DB close helper ---
