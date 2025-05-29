@@ -275,7 +275,7 @@ st.markdown(f"### 🆕 Auto-Generated Order Number: `{new_order_no}`")
     order_no = st.text_input("Order Number", key="sales_order_no")
     order_date = st.date_input("Order Date", datetime.today(), key="sales_order_date")
     urgent_flag = st.checkbox("Mark as Urgent", key="sales_urgent_flag")
-
+    
     # --- Product Entry ---
     st.write("📦 Enter Products")
     unit_options = ["KG", "Nos"]
