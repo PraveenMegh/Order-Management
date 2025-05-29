@@ -520,24 +520,16 @@ def dispatch_page(admin_view=False):
 
     return_menu_logout("dispatch")
 
+def safe_close(conn):
+    try:
+        conn.close()
+    except Exception as e:
+        print(f"Error closing DB: {e}")
+
 def admin_page():
     show_header()
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username')}**!")
     st.info("You're on the Admin Panel.")
-
-    # --- Ensure Users Table Exists ---
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            password_hash TEXT,
-            role TEXT,
-            full_name TEXT
-        )
-    ''')
-    conn.commit()
 
     # --- Create New User ---
     st.subheader("➕ Create New User")
@@ -550,6 +542,17 @@ def admin_page():
         if not new_username.strip() or not new_password or not new_full_name.strip():
             st.warning("Please enter username, full name, and password.")
         else:
+            conn = sqlite3.connect('users.db')
+            c = conn.cursor()
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE,
+                    password_hash TEXT,
+                    role TEXT,
+                    full_name TEXT
+                )
+            ''')
             hashed_pw = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt())
             try:
                 c.execute('''
@@ -557,31 +560,48 @@ def admin_page():
                     VALUES (?, ?, ?, ?)
                 ''', (new_username.strip(), hashed_pw, new_role, new_full_name.strip()))
                 conn.commit()
-                st.success(f"✅ User '{new_username}' ({new_full_name}) created successfully!")
-                st.rerun()
+                st.success(f"✅ User '{new_username}' created successfully!")
             except sqlite3.IntegrityError:
                 st.error("⚠️ Username already exists.")
+            safe_close(conn)
+            st.rerun()
 
     # --- Manage Existing Users ---
     st.markdown("---")
     st.subheader("👥 Manage Existing Users")
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE,
+            password_hash TEXT,
+            role TEXT,
+            full_name TEXT
+        )
+    ''')
+
     c.execute("SELECT user_id, username, role, full_name FROM users ORDER BY user_id")
     users = c.fetchall()
 
     for user_id, username, role, full_name in users:
         col1, col2, col3 = st.columns([3, 3, 4])
+
         with col1:
             st.markdown(f"**{username}**  \n_Full Name_: {full_name}  \n_Role_: {role}")
 
         with col2:
-            new_role = st.selectbox("Change Role", ["Admin", "Sales", "Dispatch"],
-                                    index=["Admin", "Sales", "Dispatch"].index(role),
-                                    key=f"role_{user_id}")
-            if new_role != role:
+            updated_role = st.selectbox(
+                "Change Role", ["Admin", "Sales", "Dispatch"],
+                index=["Admin", "Sales", "Dispatch"].index(role),
+                key=f"role_{user_id}"
+            )
+            if updated_role != role:
                 if st.button("Update Role", key=f"update_role_{user_id}"):
-                    c.execute("UPDATE users SET role = ? WHERE user_id = ?", (new_role, user_id))
+                    c.execute("UPDATE users SET role = ? WHERE user_id = ?", (updated_role, user_id))
                     conn.commit()
-                    st.success(f"Role updated for {username} to {new_role}")
+                    st.success(f"✅ Role updated for '{username}' to {updated_role}")
                     st.rerun()
 
         with col3:
@@ -591,16 +611,18 @@ def admin_page():
                     hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
                     c.execute("UPDATE users SET password_hash = ? WHERE user_id = ?", (hashed_pw, user_id))
                     conn.commit()
-                    st.success(f"Password reset for '{username}'")
+                    st.success(f"🔐 Password reset for '{username}'")
                     st.rerun()
+
             if username != "admin":
                 if st.button("❌ Delete", key=f"delete_{user_id}"):
                     c.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
                     conn.commit()
-                    st.warning(f"User '{username}' deleted.")
+                    st.warning(f"🗑️ User '{username}' deleted.")
                     st.rerun()
 
-    conn.close()
+    safe_close(conn)
+
     st.markdown("---")
     return_menu_logout("admin")
 
