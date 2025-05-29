@@ -264,10 +264,10 @@ def sales_page(admin_view=False):
         last_num = 0
 
     new_order_no = f"ORD-{last_num + 1:04d}"
-    st.markdown(f"### 🌟 Auto-Generated Order Number: `{new_order_no}`")
+    st.markdown(f"### 🆕 Auto-Generated Order Number: `{new_order_no}`")
 
     # --- Order Info ---
-    order_no = new_order_no  # Set auto-generated order number
+    order_no = new_order_no  # override text_input and use auto-generated value
     order_date = st.date_input("Order Date", datetime.today(), key="sales_order_date")
     urgent_flag = st.checkbox("Mark as Urgent", key="sales_urgent_flag")
 
@@ -346,25 +346,31 @@ def sales_page(admin_view=False):
     # --- Existing Orders List ---
     st.subheader("📋 My Orders")
     try:
-        if admin_view:
-            c.execute('''
-                SELECT o.order_id, o.customer_name, o.order_no, o.order_date, o.urgent_flag, o.gstin, o.created_by
-                FROM orders o
-                ORDER BY o.order_date DESC
-            ''')
-        else:
-            c.execute('''
-                SELECT o.order_id, o.customer_name, o.order_no, o.order_date, o.urgent_flag, o.gstin, o.created_by
-                FROM orders o
-                WHERE o.created_by = ?
-                ORDER BY o.order_date DESC
-            ''', (username,))
+        c.execute('''
+            SELECT o.order_id, o.customer_name, o.order_no, o.order_date, o.urgent_flag, o.gstin
+            FROM orders o
+            WHERE o.created_by = ?
+            ORDER BY o.order_date DESC
+        ''', (username,))
         orders = c.fetchall()
 
         for order in orders:
             st.markdown(
-                f"### 📅 Order No: {order[2]} | Customer: {order[1]} | GSTIN: {order[5]} | Date: {order[3]} | Urgent: {'Yes' if order[4] else 'No'} | Created By: {order[6]}"
+                f"### Order No: {order[2]} | Customer: {order[1]} | GSTIN: {order[5]} | Date: {order[3]} | Urgent: {'Yes' if order[4] else 'No'}"
             )
+
+            # Admin-only delete button after order summary
+            if admin_view:
+                if st.button(f"❌ Delete Order #{order[2]}", key=f"delete_order_{order[0]}"):
+                    try:
+                        c.execute("DELETE FROM order_products WHERE order_id = ?", (order[0],))
+                        c.execute("DELETE FROM orders WHERE order_id = ?", (order[0],))
+                        conn.commit()
+                        st.success(f"✅ Order {order[2]} deleted successfully.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Error deleting order: {e}")
+
             c.execute('''
                 SELECT product_name, quantity, unit, price_inr, price_usd
                 FROM order_products
@@ -374,14 +380,6 @@ def sales_page(admin_view=False):
             df = pd.DataFrame(products, columns=['Product Name', 'Qty', 'Unit', 'Price INR', 'Price USD'])
 
             st.data_editor(df, disabled=True, use_container_width=True, key=f"view_table_{order[0]}")
-
-            if admin_view:
-                if st.button(f"❌ Delete Order {order[2]}", key=f"delete_order_{order[0]}"):
-                    c.execute("DELETE FROM order_products WHERE order_id = ?", (order[0],))
-                    c.execute("DELETE FROM orders WHERE order_id = ?", (order[0],))
-                    conn.commit()
-                    st.warning(f"🗑️ Order {order[2]} deleted.")
-                    st.rerun()
 
     except Exception as e:
         st.error(f"⚠️ Error fetching orders: {e}")
