@@ -198,6 +198,10 @@ def reports_page():
         return_menu_logout("reports")  # ✅ Add return to main menu + logout
 
 def sales_page(admin_view=False):
+    import os
+    from datetime import datetime
+    import pandas as pd
+
     show_header()
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
     st.info("You're on the Sales Orders page.")
@@ -207,26 +211,26 @@ def sales_page(admin_view=False):
     conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
 
-    # --- Buyer Excel Upload (Optional for Admins) ---
+    # --- Upload buyer Excel file (Only Admin can replace it) ---
     if st.session_state['role'] == 'Admin':
         uploaded_file = st.file_uploader("Upload Buyer Excel File", type=["xlsx"])
         if uploaded_file is not None:
             with open("buyers.xlsx", "wb") as f:
                 f.write(uploaded_file.getbuffer())
-            st.success("✅ Buyer file uploaded and saved as 'buyers.xlsx'")
+            st.success("✅ Buyer file uploaded and saved as 'buyers.xlsx'. Please refresh to see updates.")
 
-    # --- Load Buyer File if Exists ---
+    # --- Load buyer list from file ---
     buyer_df = None
     if os.path.exists("buyers.xlsx"):
         try:
-            buyer_df = pd.read_excel("buyers.xlsx", engine='openpyxl')
+            buyer_df = pd.read_excel("buyers.xlsx", engine="openpyxl")
             buyer_df.columns = buyer_df.columns.str.strip()
             buyer_names = buyer_df["Buyer Name"].dropna().unique().tolist()
         except Exception as e:
             st.warning(f"⚠️ Error reading buyers.xlsx: {e}")
             buyer_df = None
     else:
-        st.info("📂 No buyer master found. Please upload 'buyers.xlsx' to enable buyer autofill.")
+        st.info("📂 Buyer list not found. Please ask Admin to upload 'buyers.xlsx'.")
 
     # --- Buyer Details Form ---
     st.subheader("🧾 Buyer Details")
