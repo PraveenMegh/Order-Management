@@ -257,7 +257,20 @@ def sales_page(admin_view=False):
         gstin = st.text_input("GSTIN", key="manual_gstin")
 
     # --- Order Info ---
-    order_no = st.text_input("Order Number", key="sales_order_no")
+    # --- Auto-generate Order Number ---
+    c.execute("SELECT order_no FROM orders ORDER BY order_id DESC LIMIT 1")
+    last_order = c.fetchone()
+    if last_order:
+        try:
+            last_num = int(last_order[0].split('-')[-1])
+        except:
+            last_num = 0
+    else:
+        last_num = 0
+
+new_order_no = f"ORD-{last_num + 1:04d}"
+st.markdown(f"### 🆕 Auto-Generated Order Number: `{new_order_no}`")
+
     order_date = st.date_input("Order Date", datetime.today(), key="sales_order_date")
     urgent_flag = st.checkbox("Mark as Urgent", key="sales_urgent_flag")
 
