@@ -4,7 +4,6 @@ import bcrypt
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
-sys.path.append('.')
 import os
 
 # --- Safe DB close helper ---
