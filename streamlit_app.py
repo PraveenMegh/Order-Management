@@ -164,7 +164,7 @@ def reports_page():
         data = c.fetchall()
         if data:
             df = pd.DataFrame(data, columns=["Product", "Value"])
-            fig, ax = plt.subplots(figsize=(6, 3))  # Further reduced figure size
+            fig, ax = plt.subplots(figsize=(5, 2.5))  # Adjusted figure size
             df.set_index("Product")["Value"].plot(kind="bar", ax=ax)
             ax.set_ylabel(view_option)
             ax.set_title(f"Product-wise {view_option}")
@@ -175,12 +175,20 @@ def reports_page():
         # --- Dispatched Summary ---
         st.subheader("🚚 Dispatch Summary")
         c.execute('''
-            SELECT product_name,
-                   SUM(quantity) AS dispatched_kg,
-                   SUM(quantity * (CASE WHEN price_inr > 0 THEN price_inr ELSE price_usd END)) AS total_amount
-            FROM order_products
-            WHERE status = 'Dispatched'
-            GROUP BY product_name
+            SELECT 
+                dp.product_name,
+                SUM(dp.quantity) AS dispatched_kg,
+                SUM(dp.quantity * IFNULL((
+                    SELECT op.price_inr
+                    FROM order_products op
+                    WHERE op.order_id = dp.order_id 
+                      AND op.product_name = dp.product_name 
+                      AND op.status = 'Original'
+                    ORDER BY op.order_product_id DESC LIMIT 1
+                ), 0)) AS total_amount
+            FROM order_products dp
+            WHERE dp.status = 'Dispatched'
+            GROUP BY dp.product_name
         ''')
         dispatched = c.fetchall()
 
