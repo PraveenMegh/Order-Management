@@ -95,10 +95,6 @@ def main_menu():
         st.rerun()
 
 def reports_page():
-    import os
-    import pandas as pd
-    import matplotlib.pyplot as plt
-    from datetime import datetime
     show_header()
 
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
