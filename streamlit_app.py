@@ -462,7 +462,7 @@ def dispatch_page(admin_view=False):
             df['Original Qty'] = df['Original Qty'].astype(float)
             df['Dispatched Qty'] = df['Dispatched Qty'].astype(float)
             df['Balance Qty'] = df['Original Qty'] - df['Dispatched Qty']
-            df['Balance Qty'] = df['Balance Qty'].apply(lambda x: max(0, x))  # Prevent negative values
+            df['Balance Qty'] = df['Balance Qty'].apply(lambda x: max(x, 0))
             df['Total INR'] = df['Original Qty'] * df['Price INR']
             df['Total USD'] = df['Original Qty'] * df['Price USD']
 
@@ -473,7 +473,7 @@ def dispatch_page(admin_view=False):
             st.markdown(f"**🧾 Grand Total INR:** ₹ {total_inr:,.2f} | **USD:** $ {total_usd:,.2f}")
 
             st.subheader("✏️ Edit Order")
-            st.markdown("[Coming Soon] Edit this order (functionality under development).")
+            st.info("Currently, editing the original order directly is restricted. Please contact Admin to modify.")
 
             st.subheader("📉 Balance Quantity")
             st.dataframe(df[['Product Name', 'Original Qty', 'Dispatched Qty', 'Balance Qty']], use_container_width=True)
