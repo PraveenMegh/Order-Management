@@ -620,13 +620,18 @@ def admin_page():
         st.markdown("---")
         st.subheader("🔐 Change My Password")
         current_user = st.session_state['username']
+        old_pw = st.text_input("Old Password", type="password", key="admin_old_pw")
         new_pw = st.text_input("New Password", type="password", key="admin_change_own_pw")
-        if new_pw:
-            if st.button("Update My Password", key="update_own_pw"):
+        if old_pw and new_pw:
+            c.execute("SELECT password_hash FROM users WHERE username = ?", (current_user,))
+            stored_hash = c.fetchone()
+            if stored_hash and bcrypt.checkpw(old_pw.encode(), stored_hash[0]):
                 hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
                 c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, current_user))
                 conn.commit()
                 st.success("✅ Your password has been updated.")
+            else:
+                st.error("❌ Old password is incorrect.")
 
     conn.close()
     st.markdown("---")
