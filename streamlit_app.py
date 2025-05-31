@@ -175,8 +175,9 @@ def reports_page():
         # --- Dispatched Summary ---
         st.subheader("🚚 Dispatch Summary")
         c.execute('''
-            SELECT product_name, SUM(quantity) AS dispatched_kg, 
-                   SUM(CASE WHEN price_inr > 0 THEN quantity * price_inr ELSE quantity * price_usd END) AS total_amount
+            SELECT product_name,
+                   SUM(quantity) AS dispatched_kg,
+                   SUM(quantity * CASE WHEN price_inr > 0 THEN price_inr ELSE price_usd END) AS total_amount
             FROM order_products
             WHERE status = 'Dispatched'
             GROUP BY product_name
@@ -196,15 +197,13 @@ def reports_page():
         conn.close()
 
     st.markdown("---")
-    if st.button("⬅ Return to Main Menu", key="return_main_reports"):
+    if st.button("⬅ Return to Main Menu", key="return_main_reports_btn"):
         st.session_state['page'] = 'Main Menu'
         st.rerun()
 
-    if st.button("🔒 Logout", key="logout_reports"):
+    if st.button("🔒 Logout", key="logout_reports_btn"):
         st.session_state.clear()
         st.rerun()
-
-    return_menu_logout("reports")
 
 def sales_page(admin_view=False):
     show_header()
