@@ -517,6 +517,7 @@ def dispatch_page(admin_view=False):
 
 def admin_page():
     show_header()
+    
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username')}**!")
     st.info("You're on the Admin Panel.")
 
