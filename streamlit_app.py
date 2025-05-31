@@ -407,8 +407,8 @@ def sales_page(admin_view=False):
             total_usd = df['Total USD'].sum()
             st.markdown(f"**🧾 Grand Total INR:** ₹ {total_inr:,.2f} | **USD:** $ {total_usd:,.2f}")
 
-   except Exception as e:
-       st.error(f"⚠️ Error fetching orders: {e}")
+       except Exception as e:
+           st.error(f"⚠️ Error fetching orders: {e}")
 
     conn.close()
     return_menu_logout("sales")
