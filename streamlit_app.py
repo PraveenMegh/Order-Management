@@ -164,7 +164,7 @@ def reports_page():
         data = c.fetchall()
         if data:
             df = pd.DataFrame(data, columns=["Product", "Value"])
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=(8, 4))  # Smaller figure size
             df.set_index("Product")["Value"].plot(kind="bar", ax=ax)
             ax.set_ylabel(view_option)
             ax.set_title(f"Product-wise {view_option}")
