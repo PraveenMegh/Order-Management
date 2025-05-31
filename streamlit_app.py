@@ -95,10 +95,14 @@ def main_menu():
         st.rerun()
 
 def reports_page():
-    show_header()# ✅ Show logo and company name
+    import os
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    from datetime import datetime
+    show_header()
+
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
     st.title("📊 Reports and Analytics")
-    
     st.info("Track demand, dispatched summary, and performance insights.")
 
     conn = sqlite3.connect("orders.db")
@@ -171,7 +175,8 @@ def reports_page():
         # --- Dispatched Summary ---
         st.subheader("🚚 Dispatch Summary")
         c.execute('''
-            SELECT product_name, SUM(quantity) AS dispatched_kg
+            SELECT product_name, SUM(quantity) AS dispatched_kg, 
+                   SUM(CASE WHEN price_inr > 0 THEN quantity * price_inr ELSE quantity * price_usd END) AS total_amount
             FROM order_products
             WHERE status = 'Dispatched'
             GROUP BY product_name
@@ -179,22 +184,27 @@ def reports_page():
         dispatched = c.fetchall()
 
         if dispatched:
-            st.dataframe(pd.DataFrame(dispatched, columns=["Product", "Dispatched KG"]))
+            df = pd.DataFrame(dispatched, columns=["Product", "Dispatched KG", "Total Amount"])
+            st.dataframe(df, use_container_width=True)
+            st.markdown(f"### 🧾 Total Dispatch Value: ₹ {df['Total Amount'].sum():,.2f}")
         else:
             st.info("No dispatch data available.")
 
     except Exception as e:
         st.error(f"⚠️ Error loading reports: {e}")
     finally:
-        safe_close(conn)
+        conn.close()
 
     st.markdown("---")
-    if st.button("🔒 Logout"):
-        st.session_state.clear()
+    if st.button("⬅ Return to Main Menu", key="return_main_reports"):
         st.session_state['page'] = 'Main Menu'
         st.rerun()
 
-        return_menu_logout("reports")  # ✅ Add return to main menu + logout
+    if st.button("🔒 Logout", key="logout_reports"):
+        st.session_state.clear()
+        st.rerun()
+
+    return_menu_logout("reports")
 
 def sales_page(admin_view=False):
     show_header()
