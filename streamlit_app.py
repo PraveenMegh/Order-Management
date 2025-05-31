@@ -414,9 +414,6 @@ def sales_page(admin_view=False):
     return_menu_logout("sales")
 
 def dispatch_page(admin_view=False):
-    import os
-    from datetime import datetime
-    import pandas as pd
     show_header()
 
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
@@ -519,15 +516,14 @@ def dispatch_page(admin_view=False):
     return_menu_logout("dispatch")
 
 def admin_page():
-    import sqlite3
-    import bcrypt
-    import os
+    from utils import show_header, return_menu_logout
 
     show_header()
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username')}**!")
     st.info("You're on the Admin Panel.")
 
-    db_path = os.path.join(os.getcwd(), "users.db")
+    os.makedirs("data", exist_ok=True)
+    db_path = os.path.join("data", "users.db")
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
 
