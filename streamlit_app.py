@@ -419,6 +419,9 @@ def dispatch_page(admin_view=False):
     conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
 
+    pending_orders = []
+    dispatched_orders = []
+
     # --- Existing Orders List ---
     st.subheader("📋 Original Order")
     try:
@@ -430,8 +433,10 @@ def dispatch_page(admin_view=False):
         orders = c.fetchall()
 
         for order in orders:
+            order_id, customer_name, order_no, order_date, urgent_flag, gstin = order
+
             st.markdown(
-                f"### Order No: {order[2]} | Customer: {order[1]} | GSTIN: {order[5]} | Date: {order[3]} | Urgent: {'Yes' if order[4] else 'No'}"
+                f"### Order No: {order_no} | Customer: {customer_name} | GSTIN: {gstin} | Date: {order_date} | Urgent: {'Yes' if urgent_flag else 'No'}"
             )
 
             c.execute('''
@@ -441,7 +446,7 @@ def dispatch_page(admin_view=False):
                 FROM order_products
                 WHERE order_id = ?
                 GROUP BY product_name, unit
-            ''', (order[0],))
+            ''', (order_id,))
             df = pd.DataFrame(c.fetchall(), columns=['Product Name', 'Original Qty', 'Dispatched Qty', 'Unit', 'Price INR', 'Price USD'])
 
             df['Original Qty'] = df['Original Qty'].astype(float)
@@ -451,7 +456,7 @@ def dispatch_page(admin_view=False):
             df['Total INR'] = df['Original Qty'] * df['Price INR']
             df['Total USD'] = df['Original Qty'] * df['Price USD']
 
-            st.data_editor(df[['Product Name', 'Original Qty', 'Unit', 'Price INR', 'Price USD', 'Total INR', 'Total USD']], disabled=True, use_container_width=True, key=f"view_table_{order[0]}")
+            st.data_editor(df[['Product Name', 'Original Qty', 'Unit', 'Price INR', 'Price USD', 'Total INR', 'Total USD']], disabled=True, use_container_width=True, key=f"view_table_{order_id}")
 
             total_inr = df['Total INR'].sum()
             total_usd = df['Total USD'].sum()
@@ -468,9 +473,9 @@ def dispatch_page(admin_view=False):
                 "Unit": st.column_config.SelectboxColumn("Unit", options=['KG', 'Nos']),
                 "Currency": st.column_config.SelectboxColumn("Currency", options=['INR', 'USD'])
             }
-            edited = st.data_editor(editable_df, column_config=column_config, num_rows='dynamic', key=f"edit_order_{order[0]}")
+            edited = st.data_editor(editable_df, column_config=column_config, num_rows='dynamic', key=f"edit_order_{order_id}")
 
-            if st.button("🚀 Submit Dispatch", key=f"submit_dispatch_{order[0]}"):
+            if st.button("🚀 Submit Dispatch", key=f"submit_dispatch_{order_id}"):
                 try:
                     for _, row in edited.iterrows():
                         if row['Product Name'] and float(row['Dispatch Qty']) > 0:
@@ -478,7 +483,7 @@ def dispatch_page(admin_view=False):
                                 INSERT INTO order_products (order_id, product_name, quantity, unit, price_inr, price_usd, status)
                                 VALUES (?, ?, ?, ?, ?, ?, 'Dispatched')
                             ''', (
-                                order[0],
+                                order_id,
                                 row['Product Name'],
                                 row['Dispatch Qty'],
                                 row['Unit'],
@@ -491,30 +496,36 @@ def dispatch_page(admin_view=False):
                 except Exception as e:
                     st.error(f"❌ Error submitting dispatch: {e}")
 
-            st.subheader("⏳ Pending Orders")
-            pending = df[df['Balance Qty'] > 0]
-            if not pending.empty:
-                st.dataframe(pending[['Product Name', 'Balance Qty']], use_container_width=True)
-            else:
-                st.info("✅ No pending orders.")
+            balance_df = df[df['Balance Qty'] > 0][['Product Name', 'Balance Qty']].copy()
+            if not balance_df.empty:
+                balance_df.insert(0, 'Order ID', order_id)
+                balance_df.insert(2, 'Customer', customer_name)
+                pending_orders.append(balance_df)
 
-            st.subheader("🚚 Dispatched Orders")
-            try:
-                c.execute('''
-                    SELECT product_name, quantity, unit, price_inr, price_usd FROM order_products
-                    WHERE order_id = ? AND status = 'Dispatched'
-                ''', (order[0],))
-                dispatched_rows = c.fetchall()
-                if dispatched_rows:
-                    dispatched_df = pd.DataFrame(dispatched_rows, columns=['Product Name', 'Qty', 'Unit', 'Price INR', 'Price USD'])
-                    st.dataframe(dispatched_df, use_container_width=True)
-                else:
-                    st.info("No dispatches yet.")
-            except:
-                st.warning("⚠️ Could not load dispatched products.")
+            dispatched = df[df['Dispatched Qty'] > 0][['Product Name', 'Dispatched Qty']].copy()
+            if not dispatched.empty:
+                dispatched.insert(0, 'Order ID', order_id)
+                dispatched.insert(2, 'Customer', customer_name)
+                dispatched_orders.append(dispatched)
 
     except Exception as e:
         st.error(f"⚠️ Error fetching orders: {e}")
+
+    # --- Combined Pending Orders ---
+    if pending_orders:
+        st.subheader("⏳ Pending Orders")
+        full_pending_df = pd.concat(pending_orders, ignore_index=True)
+        st.dataframe(full_pending_df, use_container_width=True)
+    else:
+        st.info("✅ No pending orders.")
+
+    # --- Combined Dispatched Orders ---
+    if dispatched_orders:
+        st.subheader("🚚 Dispatched Orders")
+        full_dispatched_df = pd.concat(dispatched_orders, ignore_index=True)
+        st.dataframe(full_dispatched_df, use_container_width=True)
+    else:
+        st.info("🚫 No dispatched orders found.")
 
     conn.close()
     return_menu_logout("dispatch")
