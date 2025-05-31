@@ -566,19 +566,6 @@ def admin_page():
     c.execute("SELECT user_id, username, role, full_name FROM users ORDER BY user_id")
     users = c.fetchall()
 
-# --- Change My Password (Admin) ---
-if st.session_state['role'] == "Admin":
-    st.markdown("---")
-    st.subheader("🔐 Change My Password")
-    current_user = st.session_state['username']
-    new_pw = st.text_input("New Password", type="password", key="admin_change_own_pw")
-    if new_pw:
-        if st.button("Update My Password", key="update_own_pw"):
-            hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
-            c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, current_user))
-            conn.commit()
-            st.success("✅ Your password has been updated.")
-
     for user_id, username, role, full_name in users:
         col1, col2, col3 = st.columns([3, 3, 4])
         with col1:
@@ -602,6 +589,19 @@ if st.session_state['role'] == "Admin":
                     conn.commit()
                     st.success(f"🔐 Password reset for '{username}'")
                     st.rerun()
+
+    # --- Change My Password (Admin) ---
+    if st.session_state['role'] == "Admin":
+        st.markdown("---")
+        st.subheader("🔐 Change My Password")
+        current_user = st.session_state['username']
+        new_pw = st.text_input("New Password", type="password", key="admin_change_own_pw")
+        if new_pw:
+            if st.button("Update My Password", key="update_own_pw"):
+            hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
+            c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, current_user))
+            conn.commit()
+            st.success("✅ Your password has been updated.")
 
             if username != "admin":
                 if st.button("❌ Delete", key=f"delete_{user_id}"):
