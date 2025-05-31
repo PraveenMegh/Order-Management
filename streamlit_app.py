@@ -414,6 +414,13 @@ def sales_page(admin_view=False):
     return_menu_logout("sales")
 
 def dispatch_page(admin_view=False):
+    import os
+    import sqlite3
+    import pandas as pd
+    from datetime import datetime
+    import streamlit as st
+    from utils import show_header, return_menu_logout
+
     show_header()
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
     st.info("You're on the 📦 Dispatch Panel.")
@@ -437,17 +444,6 @@ def dispatch_page(admin_view=False):
             st.markdown(
                 f"### Order No: {order[2]} | Customer: {order[1]} | GSTIN: {order[5]} | Date: {order[3]} | Urgent: {'Yes' if order[4] else 'No'}"
             )
-
-            if admin_view:
-                if st.button(f"❌ Delete Order #{order[2]}", key=f"delete_order_{order[0]}"):
-                    try:
-                        c.execute("DELETE FROM order_products WHERE order_id = ?", (order[0],))
-                        c.execute("DELETE FROM orders WHERE order_id = ?", (order[0],))
-                        conn.commit()
-                        st.success(f"✅ Order {order[2]} deleted successfully.")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ Error deleting order: {e}")
 
             c.execute('''
                 SELECT product_name, SUM(CASE WHEN status = 'Original' THEN quantity ELSE 0 END) as Original_Qty,
@@ -473,49 +469,38 @@ def dispatch_page(admin_view=False):
             st.markdown(f"**🧾 Grand Total INR:** ₹ {total_inr:,.2f} | **USD:** $ {total_usd:,.2f}")
 
             st.subheader("✏️ Edit Order")
-            st.info("Currently, editing the original order directly is restricted. Please contact Admin to modify.")
+            st.warning("Editing order quantity is allowed only for Balance Qty. Please reduce or correct product entries here:")
 
-            st.subheader("📉 Balance Quantity")
-            st.dataframe(df[['Product Name', 'Original Qty', 'Dispatched Qty', 'Balance Qty']], use_container_width=True)
+            editable_df = df[['Product Name', 'Balance Qty', 'Unit']].copy()
+            editable_df.rename(columns={'Balance Qty': 'Dispatch Qty'}, inplace=True)
+            editable_df['Currency'] = 'INR'
+            editable_df['Price'] = 0
+            column_config = {
+                "Unit": st.column_config.SelectboxColumn("Unit", options=['KG', 'Nos']),
+                "Currency": st.column_config.SelectboxColumn("Currency", options=['INR', 'USD'])
+            }
+            edited = st.data_editor(editable_df, column_config=column_config, num_rows='dynamic', key=f"edit_order_{order[0]}")
 
-            st.subheader("✅ Click to Dispatch")
-            balance_df = df[df['Balance Qty'] > 0].copy()
-            if balance_df.empty:
-                st.success("✅ Order fully dispatched.")
-            else:
-                dispatch_input = pd.DataFrame(columns=['Product Name', 'Quantity', 'Unit', 'Currency', 'Price'])
-                product_names = balance_df['Product Name'].tolist()
-                column_config = {
-                    "Product Name": st.column_config.SelectboxColumn("Product Name", options=product_names),
-                    "Unit": st.column_config.SelectboxColumn("Unit", options=['KG', 'Nos']),
-                    "Currency": st.column_config.SelectboxColumn("Currency", options=['INR', 'USD'])
-                }
-                new_dispatch = st.data_editor(dispatch_input, column_config=column_config, num_rows='dynamic', key=f"dispatch_entry_{order[0]}")
-
-                if st.button("🚀 Submit Dispatch", key=f"submit_dispatch_{order[0]}"):
-                    try:
-                        for _, row in new_dispatch.iterrows():
-                            if row['Product Name'] and float(row['Quantity']) > 0:
-                                qty_allowed = balance_df.loc[balance_df['Product Name'] == row['Product Name'], 'Balance Qty'].values[0]
-                                if float(row['Quantity']) <= qty_allowed:
-                                    c.execute('''
-                                        INSERT INTO order_products (order_id, product_name, quantity, unit, price_inr, price_usd, status)
-                                        VALUES (?, ?, ?, ?, ?, ?, 'Dispatched')
-                                    ''', (
-                                        order[0],
-                                        row['Product Name'],
-                                        row['Quantity'],
-                                        row['Unit'],
-                                        row['Price'] if row['Currency'] == 'INR' else 0,
-                                        row['Price'] if row['Currency'] == 'USD' else 0
-                                    ))
-                                else:
-                                    st.warning(f"❌ Quantity for {row['Product Name']} exceeds balance.")
-                        conn.commit()
-                        st.success("✅ Dispatch submitted successfully!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ Error submitting dispatch: {e}")
+            if st.button("🚀 Submit Dispatch", key=f"submit_dispatch_{order[0]}"):
+                try:
+                    for _, row in edited.iterrows():
+                        if row['Product Name'] and float(row['Dispatch Qty']) > 0:
+                            c.execute('''
+                                INSERT INTO order_products (order_id, product_name, quantity, unit, price_inr, price_usd, status)
+                                VALUES (?, ?, ?, ?, ?, ?, 'Dispatched')
+                            ''', (
+                                order[0],
+                                row['Product Name'],
+                                row['Dispatch Qty'],
+                                row['Unit'],
+                                row['Price'] if row['Currency'] == 'INR' else 0,
+                                row['Price'] if row['Currency'] == 'USD' else 0
+                            ))
+                    conn.commit()
+                    st.success("✅ Dispatch submitted successfully!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Error submitting dispatch: {e}")
 
             st.subheader("⏳ Pending Orders")
             pending = df[df['Balance Qty'] > 0]
