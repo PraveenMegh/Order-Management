@@ -410,13 +410,6 @@ def sales_page(admin_view=False):
     return_menu_logout("sales")
 
 def dispatch_page(admin_view=False):
-    import os
-    import sqlite3
-    import pandas as pd
-    from datetime import datetime
-    import streamlit as st
-    from utils import show_header, return_menu_logout
-
     show_header()
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
     st.info("You're on the 📦 Dispatch Panel.")
