@@ -517,7 +517,7 @@ def dispatch_page(admin_view=False):
 
 def admin_page():
     show_header()
-    
+
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username')}**!")
     st.info("You're on the Admin Panel.")
 
@@ -590,6 +590,13 @@ def admin_page():
                     st.success(f"🔐 Password reset for '{username}'")
                     st.rerun()
 
+            if username != "admin":
+                if st.button("❌ Delete", key=f"delete_{user_id}"):
+                    c.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+                    conn.commit()
+                    st.warning(f"🗑️ User '{username}' deleted.")
+                    st.rerun()
+
     # --- Change My Password (Admin) ---
     if st.session_state['role'] == "Admin":
         st.markdown("---")
@@ -598,17 +605,10 @@ def admin_page():
         new_pw = st.text_input("New Password", type="password", key="admin_change_own_pw")
         if new_pw:
             if st.button("Update My Password", key="update_own_pw"):
-            hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
-            c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, current_user))
-            conn.commit()
-            st.success("✅ Your password has been updated.")
-
-            if username != "admin":
-                if st.button("❌ Delete", key=f"delete_{user_id}"):
-                    c.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
-                    conn.commit()
-                    st.warning(f"🗑️ User '{username}' deleted.")
-                    st.rerun()
+                hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
+                c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, current_user))
+                conn.commit()
+                st.success("✅ Your password has been updated.")
 
     conn.close()
     st.markdown("---")
