@@ -389,7 +389,7 @@ def sales_page(admin_view=False):
                     except Exception as e:
                         st.error(f"❌ Error deleting order: {e}")
 
-            c.execute('''
+         c.execute('''
                 SELECT product_name, quantity, unit, price_inr, price_usd
                 FROM order_products
                 WHERE order_id = ? AND status = 'Original'
@@ -397,10 +397,18 @@ def sales_page(admin_view=False):
             products = c.fetchall()
             df = pd.DataFrame(products, columns=['Product Name', 'Qty', 'Unit', 'Price INR', 'Price USD'])
 
+            df['Total INR'] = df['Qty'] * df['Price INR']
+            df['Total USD'] = df['Qty'] * df['Price USD']
+
             st.data_editor(df, disabled=True, use_container_width=True, key=f"view_table_{order[0]}")
 
-    except Exception as e:
-        st.error(f"⚠️ Error fetching orders: {e}")
+            # Show grand totals
+            total_inr = df['Total INR'].sum()
+            total_usd = df['Total USD'].sum()
+            st.markdown(f"**🧾 Grand Total INR:** ₹ {total_inr:,.2f} | **USD:** $ {total_usd:,.2f}")
+
+   except Exception as e:
+       st.error(f"⚠️ Error fetching orders: {e}")
 
     conn.close()
     return_menu_logout("sales")
