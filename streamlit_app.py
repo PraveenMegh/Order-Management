@@ -389,7 +389,7 @@ def sales_page(admin_view=False):
                     except Exception as e:
                         st.error(f"❌ Error deleting order: {e}")
 
-         c.execute('''
+            c.execute('''
                 SELECT product_name, quantity, unit, price_inr, price_usd
                 FROM order_products
                 WHERE order_id = ? AND status = 'Original'
