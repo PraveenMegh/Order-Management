@@ -415,102 +415,132 @@ def sales_page(admin_view=False):
 
 def dispatch_page(admin_view=False):
     show_header()
-
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
-    st.info("You're on the Dispatch Page. View and dispatch orders below.")
+    st.info("You're on the 📦 Dispatch Panel.")
 
+    username = st.session_state.get('username')
     conn = sqlite3.connect('orders.db')
     conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
 
-    # --- Fetch all Orders ---
-    c.execute("SELECT order_id, customer_name, order_no, order_date, urgent_flag FROM orders ORDER BY order_date DESC")
-    orders = c.fetchall()
-
-    for order in orders:
-        order_id, customer_name, order_no, order_date, urgent_flag = order
-        st.markdown(f"## Order No: {order_no} | Customer: {customer_name} | Date: {order_date} | Urgent: {'Yes' if urgent_flag else 'No'}")
-
-        # Fetch Original Products
+    # --- Existing Orders List ---
+    st.subheader("📋 Original Order")
+    try:
         c.execute('''
-            SELECT product_name, quantity, unit, price_inr, price_usd
-            FROM order_products
-            WHERE order_id = ? AND status = 'Original'
-        ''', (order_id,))
-        original_products = pd.DataFrame(c.fetchall(), columns=['Product Name', 'Original Qty', 'Unit', 'Price INR', 'Price USD'])
+            SELECT o.order_id, o.customer_name, o.order_no, o.order_date, o.urgent_flag, o.gstin
+            FROM orders o
+            ORDER BY o.order_date DESC
+        ''')
+        orders = c.fetchall()
 
-        if original_products.empty:
-            st.warning("No products found for this order.")
-            continue
+        for order in orders:
+            st.markdown(
+                f"### Order No: {order[2]} | Customer: {order[1]} | GSTIN: {order[5]} | Date: {order[3]} | Urgent: {'Yes' if order[4] else 'No'}"
+            )
 
-        st.markdown("### 📦 Original Order")
-        st.dataframe(original_products, use_container_width=True)
+            if admin_view:
+                if st.button(f"❌ Delete Order #{order[2]}", key=f"delete_order_{order[0]}"):
+                    try:
+                        c.execute("DELETE FROM order_products WHERE order_id = ?", (order[0],))
+                        c.execute("DELETE FROM orders WHERE order_id = ?", (order[0],))
+                        conn.commit()
+                        st.success(f"✅ Order {order[2]} deleted successfully.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Error deleting order: {e}")
 
-        # Fetch Dispatched History
-        c.execute('''
-            SELECT product_name, quantity, unit, price_inr, price_usd
-            FROM order_products
-            WHERE order_id = ? AND status = 'Dispatched'
-        ''', (order_id,))
-        dispatched_products = pd.DataFrame(c.fetchall(), columns=['Product Name', 'Dispatched Qty', 'Unit', 'Price INR', 'Price USD'])
+            c.execute('''
+                SELECT product_name, SUM(CASE WHEN status = 'Original' THEN quantity ELSE 0 END) as Original_Qty,
+                       SUM(CASE WHEN status = 'Dispatched' THEN quantity ELSE 0 END) as Dispatched_Qty,
+                       unit, MAX(price_inr) as Price_INR, MAX(price_usd) as Price_USD
+                FROM order_products
+                WHERE order_id = ?
+                GROUP BY product_name, unit
+            ''', (order[0],))
+            df = pd.DataFrame(c.fetchall(), columns=['Product Name', 'Original Qty', 'Dispatched Qty', 'Unit', 'Price INR', 'Price USD'])
 
-        if not dispatched_products.empty:
-            st.markdown("### ✅ Dispatched History")
-            st.dataframe(dispatched_products, use_container_width=True)
+            df['Original Qty'] = df['Original Qty'].astype(float)
+            df['Dispatched Qty'] = df['Dispatched Qty'].astype(float)
+            df['Balance Qty'] = df['Original Qty'] - df['Dispatched Qty']
+            df['Balance Qty'] = df['Balance Qty'].apply(lambda x: max(0, x))  # Prevent negative values
+            df['Total INR'] = df['Original Qty'] * df['Price INR']
+            df['Total USD'] = df['Original Qty'] * df['Price USD']
 
-        # Show balance qty calculation
-        st.markdown("### 📊 Balance Quantity")
-        merged = original_products[['Product Name', 'Original Qty']].copy()
-        if not dispatched_products.empty:
-            dispatched_sum = dispatched_products.groupby('Product Name')['Dispatched Qty'].sum().reset_index()
-            merged = pd.merge(merged, dispatched_sum, on='Product Name', how='left').fillna(0)
-        else:
-            merged['Dispatched Qty'] = 0
+            st.data_editor(df[['Product Name', 'Original Qty', 'Unit', 'Price INR', 'Price USD', 'Total INR', 'Total USD']], disabled=True, use_container_width=True, key=f"view_table_{order[0]}")
 
-        merged['Balance Qty'] = merged['Original Qty'] - merged['Dispatched Qty']
-        st.dataframe(merged, use_container_width=True)
+            total_inr = df['Total INR'].sum()
+            total_usd = df['Total USD'].sum()
+            st.markdown(f"**🧾 Grand Total INR:** ₹ {total_inr:,.2f} | **USD:** $ {total_usd:,.2f}")
 
-        # Only allow dispatch if there is a balance quantity
-        balance_df = merged[merged['Balance Qty'] > 0][['Product Name', 'Balance Qty']]
-        if balance_df.empty:
-            st.info("✅ Order fully dispatched.")
-            continue
+            st.subheader("✏️ Edit Order")
+            st.markdown("[Coming Soon] Edit this order (functionality under development).")
 
-        st.markdown("### 🚚 Dispatch Entry")
-        dispatch_df = pd.DataFrame(columns=['Product Name', 'Quantity', 'Unit', 'Currency', 'Price'])
-        product_names = balance_df['Product Name'].tolist()
-        column_config = {
-            "Product Name": st.column_config.SelectboxColumn("Product Name", options=product_names),
-            "Unit": st.column_config.SelectboxColumn("Unit", options=['KG', 'Nos']),
-            "Currency": st.column_config.SelectboxColumn("Currency", options=['INR', 'USD'])
-        }
+            st.subheader("📉 Balance Quantity")
+            st.dataframe(df[['Product Name', 'Original Qty', 'Dispatched Qty', 'Balance Qty']], use_container_width=True)
 
-        new_dispatch = st.data_editor(dispatch_df, column_config=column_config, num_rows='dynamic', key=f"dispatch_entry_{order_id}")
+            st.subheader("✅ Click to Dispatch")
+            balance_df = df[df['Balance Qty'] > 0].copy()
+            if balance_df.empty:
+                st.success("✅ Order fully dispatched.")
+            else:
+                dispatch_input = pd.DataFrame(columns=['Product Name', 'Quantity', 'Unit', 'Currency', 'Price'])
+                product_names = balance_df['Product Name'].tolist()
+                column_config = {
+                    "Product Name": st.column_config.SelectboxColumn("Product Name", options=product_names),
+                    "Unit": st.column_config.SelectboxColumn("Unit", options=['KG', 'Nos']),
+                    "Currency": st.column_config.SelectboxColumn("Currency", options=['INR', 'USD'])
+                }
+                new_dispatch = st.data_editor(dispatch_input, column_config=column_config, num_rows='dynamic', key=f"dispatch_entry_{order[0]}")
 
-        if st.button("🚀 Submit Dispatch", key=f"submit_dispatch_{order_id}"):
+                if st.button("🚀 Submit Dispatch", key=f"submit_dispatch_{order[0]}"):
+                    try:
+                        for _, row in new_dispatch.iterrows():
+                            if row['Product Name'] and float(row['Quantity']) > 0:
+                                qty_allowed = balance_df.loc[balance_df['Product Name'] == row['Product Name'], 'Balance Qty'].values[0]
+                                if float(row['Quantity']) <= qty_allowed:
+                                    c.execute('''
+                                        INSERT INTO order_products (order_id, product_name, quantity, unit, price_inr, price_usd, status)
+                                        VALUES (?, ?, ?, ?, ?, ?, 'Dispatched')
+                                    ''', (
+                                        order[0],
+                                        row['Product Name'],
+                                        row['Quantity'],
+                                        row['Unit'],
+                                        row['Price'] if row['Currency'] == 'INR' else 0,
+                                        row['Price'] if row['Currency'] == 'USD' else 0
+                                    ))
+                                else:
+                                    st.warning(f"❌ Quantity for {row['Product Name']} exceeds balance.")
+                        conn.commit()
+                        st.success("✅ Dispatch submitted successfully!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Error submitting dispatch: {e}")
+
+            st.subheader("⏳ Pending Orders")
+            pending = df[df['Balance Qty'] > 0]
+            if not pending.empty:
+                st.dataframe(pending[['Product Name', 'Balance Qty']], use_container_width=True)
+            else:
+                st.info("✅ No pending orders.")
+
+            st.subheader("🚚 Dispatched Orders")
             try:
-                for _, row in new_dispatch.iterrows():
-                    if row['Product Name'] and float(row['Quantity']) > 0:
-                        qty_allowed = balance_df.loc[balance_df['Product Name'] == row['Product Name'], 'Balance Qty'].values[0]
-                        if float(row['Quantity']) <= qty_allowed:
-                            c.execute('''
-                                INSERT INTO order_products (order_id, product_name, quantity, unit, price_inr, price_usd, status)
-                                VALUES (?, ?, ?, ?, ?, ?, 'Dispatched')
-                            ''', (
-                                order_id,
-                                row['Product Name'],
-                                row['Quantity'],
-                                row['Unit'],
-                                row['Price'] if row['Currency'] == 'INR' else 0,
-                                row['Price'] if row['Currency'] == 'USD' else 0
-                            ))
-                        else:
-                            st.warning(f"❌ Quantity for {row['Product Name']} exceeds balance.")
-                conn.commit()
-                st.success("✅ Dispatch submitted successfully!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"❌ Error submitting dispatch: {e}")
+                c.execute('''
+                    SELECT product_name, quantity, unit, price_inr, price_usd FROM order_products
+                    WHERE order_id = ? AND status = 'Dispatched'
+                ''', (order[0],))
+                dispatched_rows = c.fetchall()
+                if dispatched_rows:
+                    dispatched_df = pd.DataFrame(dispatched_rows, columns=['Product Name', 'Qty', 'Unit', 'Price INR', 'Price USD'])
+                    st.dataframe(dispatched_df, use_container_width=True)
+                else:
+                    st.info("No dispatches yet.")
+            except:
+                st.warning("⚠️ Could not load dispatched products.")
+
+    except Exception as e:
+        st.error(f"⚠️ Error fetching orders: {e}")
 
     conn.close()
     return_menu_logout("dispatch")
