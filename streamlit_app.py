@@ -4,6 +4,8 @@ import bcrypt
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
+from utils import show_header, return_menu_logout
+sys.path.append('.')
 import os
 
 # --- Safe DB close helper ---
@@ -458,12 +460,12 @@ def dispatch_page(admin_view=False):
             st.markdown(f"**🧾 Grand Total INR:** ₹ {total_inr:,.2f} | **USD:** $ {total_usd:,.2f}")
 
             st.subheader("✏️ Edit Order")
-            st.warning("Editing order quantity is allowed only for Balance Qty. Please reduce or correct product entries here:")
+            st.info("Edit and adjust dispatch quantities below.")
 
-            editable_df = df[['Product Name', 'Balance Qty', 'Unit']].copy()
-            editable_df.rename(columns={'Balance Qty': 'Dispatch Qty'}, inplace=True)
+            editable_df = df[['Product Name', 'Unit']].copy()
+            editable_df['Dispatch Qty'] = 0.0
             editable_df['Currency'] = 'INR'
-            editable_df['Price'] = 0
+            editable_df['Price'] = 0.0
             column_config = {
                 "Unit": st.column_config.SelectboxColumn("Unit", options=['KG', 'Nos']),
                 "Currency": st.column_config.SelectboxColumn("Currency", options=['INR', 'USD'])
