@@ -160,7 +160,7 @@ def reports_page():
         data = c.fetchall()
         if data:
             df = pd.DataFrame(data, columns=["Product", "Value"])
-            fig, ax = plt.subplots(figsize=(5, 2.5))  # Adjusted figure size
+            fig, ax = plt.subplots(figsize=(5, 2.5))
             df.set_index("Product")["Value"].plot(kind="bar", ax=ax)
             ax.set_ylabel(view_option)
             ax.set_title(f"Product-wise {view_option}")
@@ -172,6 +172,8 @@ def reports_page():
         st.subheader("🚚 Dispatch Summary")
         c.execute('''
             SELECT 
+                o.order_id,
+                o.customer_name,
                 dp.product_name,
                 SUM(dp.quantity) AS dispatched_kg,
                 SUM(dp.quantity * IFNULL((
@@ -183,13 +185,14 @@ def reports_page():
                     ORDER BY op.order_product_id DESC LIMIT 1
                 ), 0)) AS total_amount
             FROM order_products dp
+            JOIN orders o ON o.order_id = dp.order_id
             WHERE dp.status = 'Dispatched'
-            GROUP BY dp.product_name
+            GROUP BY dp.order_id, o.customer_name, dp.product_name
         ''')
         dispatched = c.fetchall()
 
         if dispatched:
-            df = pd.DataFrame(dispatched, columns=["Product", "Dispatched KG", "Total Amount"])
+            df = pd.DataFrame(dispatched, columns=["Order ID", "Customer", "Product", "Dispatched KG", "Total Amount"])
             df["Total Amount"] = df["Total Amount"].fillna(0).astype(float)
             st.dataframe(df, use_container_width=True)
             st.markdown(f"### 🧾 Total Dispatch Value: ₹ {df['Total Amount'].sum():,.2f}")
