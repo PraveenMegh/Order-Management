@@ -32,39 +32,49 @@ def return_menu_logout(key_prefix):
         st.session_state['logged_in'] = False
 
 def login_page():
-    
-    # Centered logo and heading
-    st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-    if os.path.exists("assets/logo.png"):
-        st.image("assets/logo.png", width=120)
-    st.markdown("<h1>Shree Sai Industries</h1>", unsafe_allow_html=True)
-    st.markdown("<h3>👋 Welcome to Shree Sai Salt - Order Management System</h3>", unsafe_allow_html=True)
-    st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    # --- Logo and Heading (Centered) ---
+    with st.container():
+        st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+        if os.path.exists("assets/logo.png"):
+            st.image("assets/logo.png", width=120)
+        st.markdown("<h1>Shree Sai Industries</h1>", unsafe_allow_html=True)
+        st.markdown("<h3>👋 Welcome to Shree Sai Salt - Order Management System</h3>", unsafe_allow_html=True)
+        st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # Layout: left image, center login, right images
-    col1, col2, col3 = st.columns([1.2, 2, 1.2])
+    # --- Main Layout: 3 Columns ---
+    col1, col2, col3 = st.columns([1.2, 2, 1.5])
 
+    # --- Left Column (Main Banner) ---
     with col1:
         if os.path.exists("assets/home_banner.jpg"):
             st.image("assets/home_banner.jpg", use_container_width=True)
 
+    # --- Center Column (Login Box shifted down) ---
     with col2:
-        with st.container():
-            st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
-            username = st.text_input("Username", key="login_username")
-            password = st.text_input("Password", type="password", key="login_password")
-            if st.button("Login", key="login_button"):
-                login_user(username, password)
+        st.markdown("<div style='margin-top: 120px;'>", unsafe_allow_html=True)
+        st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
+        username = st.text_input("Username", key="login_username")
+        password = st.text_input("Password", type="password", key="login_password")
+        if st.button("Login", key="login_button"):
+            login_user(username, password)
+        st.markdown("</div>", unsafe_allow_html=True)
 
+    # --- Right Column (Product Images) ---
     with col3:
-        if os.path.exists("assets/home_banner1.jpg"):
-            st.image("assets/home_banner1.jpg", use_container_width=True)
-        if os.path.exists("assets/home_banner2.jpg"):
-            st.image("assets/home_banner2.jpg", use_container_width=True)
+        right_images = [
+            "home_banner1.jpg", "home_banner2.jpg",
+            "product1.jpg", "product2.jpg",
+            "product3.jpg", "product4.jpg"
+        ]
+        for img in right_images:
+            img_path = f"assets/{img}"
+            if os.path.exists(img_path):
+                st.image(img_path, use_container_width=True)
 
+    # --- Footer ---
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown(
         "<div style='text-align: center; font-size: 22px; font-weight: bold;'>Premium Quality You Can Trust</div>",
