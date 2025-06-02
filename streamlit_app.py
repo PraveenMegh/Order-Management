@@ -32,24 +32,20 @@ def return_menu_logout(key_prefix):
         st.session_state['logged_in'] = False
 
 def login_page():
-    # --- Eliminate default padding to avoid scroll ---
+    # --- Remove default padding to prevent scroll ---
     st.markdown("""
         <style>
             .block-container {
-                padding-top: 10px !important;
-                padding-bottom: 10px !important;
+                padding-top: 5px !important;
+                padding-bottom: 5px !important;
             }
         </style>
     """, unsafe_allow_html=True)
 
-    # --- Top: Centered Logo + Welcome Text ---
-    st.markdown("<div style='text-align: center; margin-top: 5px;'>", unsafe_allow_html=True)
-
+    # --- Centered Logo + Heading ---
+    st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     if os.path.exists("assets/logo.jpg"):
-        st.image("assets/logo.jpg", width=140)
-    else:
-        st.warning("⚠️ 'logo.jpg' not found in /assets.")
-
+        st.image("assets/logo.jpg", width=100)
     st.markdown("<h1 style='margin-bottom: 5px;'>Shree Sai Industries</h1>", unsafe_allow_html=True)
     st.markdown("<h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
     st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
@@ -57,15 +53,15 @@ def login_page():
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # --- Main 3-Column Layout ---
+    # --- Layout: Left (model), Center (login), Right (products) ---
     col1, col2, col3 = st.columns([1.2, 2, 1.5])
 
-    # --- LEFT: Model Image ---
+    # --- LEFT COLUMN: Model Image ---
     with col1:
         if os.path.exists("assets/home_banner.jpg"):
             st.image("assets/home_banner.jpg", use_container_width=True)
 
-    # --- CENTER: Login Box (Vertically aligned lower) ---
+    # --- CENTER COLUMN: Login Form ---
     with col2:
         st.markdown("<div style='margin-top: 80px;'>", unsafe_allow_html=True)
         st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
@@ -75,35 +71,25 @@ def login_page():
             login_user(username, password)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- RIGHT: Product Images (4 above, 2 centered below) ---
+    # --- RIGHT COLUMN: Product Layout (2 top + 1 centered below) ---
     with col3:
-        top_imgs = ["home_banner1.jpg", "home_banner2.jpg", "product1.jpg", "product2.jpg"]
-        bottom_imgs = ["product3.jpg", "product4.jpg"]
-
-        # Grid 2x2 for first 4
+        # Row 1: two products side by side
         r1c1, r1c2 = st.columns(2)
         with r1c1:
-            for img in top_imgs[:2]:
-                path = f"assets/{img}"
-                if os.path.exists(path):
-                    st.image(path, use_container_width=True)
+            if os.path.exists("assets/home_banner1.jpg"):
+                st.image("assets/home_banner1.jpg", use_container_width=True)
         with r1c2:
-            for img in top_imgs[2:]:
-                path = f"assets/{img}"
-                if os.path.exists(path):
-                    st.image(path, use_container_width=True)
+            if os.path.exists("assets/home_banner2.jpg"):
+                st.image("assets/home_banner2.jpg", use_container_width=True)
 
-        # Centered 2 products
-        st.markdown("<div style='display: flex; justify-content: center; gap: 10px;'>", unsafe_allow_html=True)
-        for img in bottom_imgs:
-            path = f"assets/{img}"
-            if os.path.exists(path):
-                st.image(path, width=100)
+        # Row 2: one product centered below
+        st.markdown("<div style='display: flex; justify-content: center; margin-top: -10px;'>", unsafe_allow_html=True)
+        if os.path.exists("assets/product1.jpg"):
+            st.image("assets/product1.jpg", width=150)
         st.markdown("</div>", unsafe_allow_html=True)
 
     # --- Footer ---
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown("<div style='text-align: center; font-size: 22px; font-weight: bold;'>Premium Quality You Can Trust</div>", unsafe_allow_html=True)
+    st.markdown(
 
 # --- Main Menu ---
 def main_menu():
