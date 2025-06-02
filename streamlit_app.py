@@ -46,7 +46,7 @@ def login_page():
     st.markdown("<div style='text-align: center; margin-top: 5px;'>", unsafe_allow_html=True)
 
     if os.path.exists("assets/logo.jpg"):
-        st.image("assets/logo.jpg", width=100)
+        st.image("assets/logo.jpg", width=140)
     else:
         st.warning("⚠️ 'logo.jpg' not found in /assets.")
 
