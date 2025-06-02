@@ -32,7 +32,8 @@ def return_menu_logout(key_prefix):
         st.session_state['logged_in'] = False
 
 def login_page():
-    # Center logo and heading
+    Show header()
+    # Centered logo and heading
     st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     if os.path.exists("assets/logo.png"):
         st.image("assets/logo.png", width=120)
@@ -41,30 +42,34 @@ def login_page():
     st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.markdown("<hr>", unsafe_allow_html=True)
 
-    # Main layout: Left = home_banner.jpg, Middle = login form, Right = home_banner1 + home_banner2
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Layout: left image, center login, right images
+    col1, col2, col3 = st.columns([1.2, 2, 1.2])
 
     with col1:
         if os.path.exists("assets/home_banner.jpg"):
-            st.image("assets/home_banner.jpg", use_column_width=True)
+            st.image("assets/home_banner.jpg", use_container_width=True)
 
     with col2:
-        st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
-        username = st.text_input("Username", key="login_username")
-        password = st.text_input("Password", type="password", key="login_password")
-        if st.button("Login", key="login_button"):
-            login_user(username, password)
+        with st.container():
+            st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
+            username = st.text_input("Username", key="login_username")
+            password = st.text_input("Password", type="password", key="login_password")
+            if st.button("Login", key="login_button"):
+                login_user(username, password)
 
     with col3:
         if os.path.exists("assets/home_banner1.jpg"):
-            st.image("assets/home_banner1.jpg", use_column_width=True)
+            st.image("assets/home_banner1.jpg", use_container_width=True)
         if os.path.exists("assets/home_banner2.jpg"):
-            st.image("assets/home_banner2.jpg", use_column_width=True)
+            st.image("assets/home_banner2.jpg", use_container_width=True)
 
     st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown("<div style='text-align: center; font-size: 22px; font-weight: bold;'>Premium Quality You Can Trust</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='text-align: center; font-size: 22px; font-weight: bold;'>Premium Quality You Can Trust</div>",
+        unsafe_allow_html=True
+    )
 
 # --- Main Menu ---
 def main_menu():
