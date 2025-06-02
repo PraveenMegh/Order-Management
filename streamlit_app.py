@@ -648,8 +648,8 @@ def admin_page():
                    st.success("✅ Your password has been updated.")
                else:
                    st.error("❌ Old password is incorrect.")
-        else:
-               st.error("❌ User not found.")
+            else:
+                st.error("❌ User not found.")
 
     conn.close()
     st.markdown("---")
