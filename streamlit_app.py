@@ -642,14 +642,14 @@ def admin_page():
                 if isinstance(stored_pw, memoryview):
                    stored_pw = stored_pw.tobytes()
                 if bcrypt.checkpw(old_pw.encode(), stored_pw):
-                   new_hashed = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
-                   c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (new_hashed, current_user))
-                   conn.commit()
-                   st.success("✅ Your password has been updated.")
-               else:
-                   st.error("❌ Old password is incorrect.")
+                    new_hashed = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
+                    c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (new_hashed, current_user))
+                    conn.commit()
+                    st.success("✅ Your password has been updated.")
+                else:
+                    st.error("❌ Old password is incorrect.")
             else:
-                st.error("❌ User not found.")
+                 st.error("❌ User not found.")
 
     conn.close()
     st.markdown("---")
