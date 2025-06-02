@@ -32,17 +32,11 @@ def return_menu_logout(key_prefix):
         st.session_state['logged_in'] = False
 
 def login_page():
-    st.image("assets/logo.jpg", width=120)
+    show_header()
 
-    # Title centered
-    st.markdown("<h1 style='text-align: center;'>Shree Sai Industries</h1>", unsafe_allow_html=True)
-
-    # Welcome message
     st.markdown("### 👋 Welcome to Shree Sai Salt - Order Management System")
     st.markdown("Please log in with your credentials to access your department panel.")
-
-    # Layout for logo + login
-    col1, col2 = st.columns([1, 3])
+    st.title("Login")
 
     with col1:
         st.image("assets/home_banner.jpg", width=200)
