@@ -32,44 +32,37 @@ def return_menu_logout(key_prefix):
         st.session_state['logged_in'] = False
 
 def login_page():
-    show_header()
+    # Center logo and heading
+    st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+    if os.path.exists("assets/logo.png"):
+        st.image("assets/logo.png", width=120)
+    st.markdown("<h1>Shree Sai Industries</h1>", unsafe_allow_html=True)
+    st.markdown("<h3>👋 Welcome to Shree Sai Salt - Order Management System</h3>", unsafe_allow_html=True)
+    st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("### 👋 Welcome to Shree Sai Salt - Order Management System")
-    st.markdown("Please log in with your credentials to access your department panel.")
-    st.title("Login")
-    
-    col1, col2 = st.columns([1, 3])
+    st.markdown("---")
+
+    # Main layout: Left = home_banner.jpg, Middle = login form, Right = home_banner1 + home_banner2
+    col1, col2, col3 = st.columns([1, 2, 1])
 
     with col1:
-        banner_path = "assets/home_banner.jpg"
-        if os.path.exists(banner_path):
-            st.image(banner_path, width=200)
+        if os.path.exists("assets/home_banner.jpg"):
+            st.image("assets/home_banner.jpg", use_column_width=True)
 
     with col2:
-        st.markdown("### 🔐 Login to Your Panel")
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        if st.button("Login"):
+        st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
+        username = st.text_input("Username", key="login_username")
+        password = st.text_input("Password", type="password", key="login_password")
+        if st.button("Login", key="login_button"):
             login_user(username, password)
 
-    with col2:
-        st.markdown("### 🔐 Login to Your Panel")
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        if st.button("Login"):
-            login_user(username, password)
-
-    # Product images below login form
-    st.markdown("---")
-    col3, col4 = st.columns([1, 1])
     with col3:
-        st.image("assets/home_banner1.jpg", width=200)
-        st.markdown("**Premium Product 1**", unsafe_allow_html=True)
-    with col4:
-        st.image("assets/home_banner2.jpg", width=200)
-        st.markdown("**Premium Product 2**", unsafe_allow_html=True)
+        if os.path.exists("assets/home_banner1.jpg"):
+            st.image("assets/home_banner1.jpg", use_column_width=True)
+        if os.path.exists("assets/home_banner2.jpg"):
+            st.image("assets/home_banner2.jpg", use_column_width=True)
 
-    # Footer slogan
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; font-size: 22px; font-weight: bold;'>Premium Quality You Can Trust</div>", unsafe_allow_html=True)
 
