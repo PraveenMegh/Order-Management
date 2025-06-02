@@ -32,45 +32,49 @@ def return_menu_logout(key_prefix):
         st.session_state['logged_in'] = False
 
 def login_page():
-    show_header()
+    st.image("assets/logo.png", width=120)
+    st.markdown("""
+        <h1 style='text-align: center;'>Shree Sai Industries</h1>
+    """, unsafe_allow_html=True)
 
-    # 🌟 Branding Section with Banners
-    st.image("assets/logo.jpg", width=120)
-    st.markdown("<h2 style='text-align: center;'>Welcome to Shree Sai Salt</h2>", unsafe_allow_html=True)
+    # Home Banner (small and left-aligned)
+    st.markdown("""
+        <div style='text-align: left;'>
+            <img src='assets/home_banner.jpg' width='250'>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # Banner and Product Display
-    st.image("assets/home_banner.jpg", use_column_width=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        st.image("assets/home_banner1.jpg", caption="Premium Product 1", use_column_width=True)
-    with col2:
-        st.image("assets/home_banner2.jpg", caption="Premium Product 2", use_column_width=True)
-
-    # Login Fields
-    st.markdown("---")
-    st.subheader("🔐 Login to Your Panel")
+    # Login form section
+    st.markdown("""
+        <hr style='border: 1px solid #eee;'>
+        <h3 style='text-align:center;'>🔐 Login to Your Panel</h3>
+    """, unsafe_allow_html=True)
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
+    if st.button("Login"):
+        login_user(username, password)
 
-    if st.button("Login", key="login_button"):
-        conn = sqlite3.connect('data/users.db')
-        c = conn.cursor()
-        c.execute('SELECT username, password_hash, role, full_name FROM users WHERE username = ?', (username,))
-        result = c.fetchone()
-        conn.close()
+    # Product banners layout
+    st.markdown("""
+        <div style='display: flex; justify-content: center; gap: 50px; margin-top: 30px;'>
+            <div style='text-align: center;'>
+                <img src='assets/home_banner1.jpg' width='200'>
+                <p><strong>Premium Product 1</strong></p>
+            </div>
+            <div style='text-align: center;'>
+                <img src='assets/home_banner2.jpg' width='200'>
+                <p><strong>Premium Product 2</strong></p>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-        if result and bcrypt.checkpw(password.encode(), result[1]):
-            st.session_state['logged_in'] = True
-            st.session_state['username'] = result[0]
-            st.session_state['role'] = result[2]
-            st.session_state['full_name'] = result[3]
-            st.session_state['page'] = 'Main Menu'
-            st.rerun()
-        else:
-            st.error("Invalid credentials")
-
-    st.markdown("---")
-    st.markdown("<h4 style='text-align: center; color: gray;'>Premium Quality You Can Trust</h4>", unsafe_allow_html=True)
+    # Footer slogan
+    st.markdown("""
+        <hr style='border: 1px solid #eee;'>
+        <div style='text-align: center; font-size: 22px; font-weight: bold;'>
+            Premium Quality You Can Trust
+        </div>
+    """, unsafe_allow_html=True)
 
 # --- Main Menu ---
 def main_menu():
