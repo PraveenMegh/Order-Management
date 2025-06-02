@@ -34,36 +34,43 @@ def return_menu_logout(key_prefix):
 def login_page():
     show_header()
 
-    st.markdown("### 👋 Welcome to Shree Sai Salt - Order Management System")
-    st.markdown("Please log in with your credentials to access your department panel.")
-    st.title("Login")
+    # 🌟 Branding Section with Banners
+    st.image("assets/logo.png", width=120)
+    st.markdown("<h2 style='text-align: center;'>Welcome to Shree Sai Salt</h2>", unsafe_allow_html=True)
 
+    # Banner and Product Display
+    st.image("assets/home_banner.jpg", use_column_width=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.image("assets/home_banner1.jpg", caption="Premium Product 1", use_column_width=True)
+    with col2:
+        st.image("assets/home_banner2.jpg", caption="Premium Product 2", use_column_width=True)
+
+    # Login Fields
+    st.markdown("---")
+    st.subheader("🔐 Login to Your Panel")
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
     if st.button("Login", key="login_button"):
-        conn = sqlite3.connect('data/users.db')  # ✅ Use correct path
-        conn.row_factory = sqlite3.Row
+        conn = sqlite3.connect('data/users.db')
         c = conn.cursor()
         c.execute('SELECT username, password_hash, role, full_name FROM users WHERE username = ?', (username,))
-        row = c.fetchone()
+        result = c.fetchone()
         conn.close()
 
-        if row:
-            stored_hash = row["password_hash"]
-            if isinstance(stored_hash, memoryview):
-                stored_hash = stored_hash.tobytes()
-            if bcrypt.checkpw(password.encode(), stored_hash):
-                st.session_state['logged_in'] = True
-                st.session_state['username'] = row["username"]
-                st.session_state['role'] = row["role"]
-                st.session_state['full_name'] = row["full_name"]
-                st.session_state['page'] = 'Main Menu'
-                st.rerun()
-            else:
-                st.error("❌ Invalid password.")
+        if result and bcrypt.checkpw(password.encode(), result[1]):
+            st.session_state['logged_in'] = True
+            st.session_state['username'] = result[0]
+            st.session_state['role'] = result[2]
+            st.session_state['full_name'] = result[3]
+            st.session_state['page'] = 'Main Menu'
+            st.rerun()
         else:
-            st.error("❌ Username not found.")
+            st.error("Invalid credentials")
+
+    st.markdown("---")
+    st.markdown("<h4 style='text-align: center; color: gray;'>Premium Quality You Can Trust</h4>", unsafe_allow_html=True)
 
 # --- Main Menu ---
 def main_menu():
