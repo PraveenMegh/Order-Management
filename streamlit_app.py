@@ -32,33 +32,40 @@ def return_menu_logout(key_prefix):
         st.session_state['logged_in'] = False
 
 def login_page():
-    
-    # --- Centered Logo + Welcome Message with Reduced Top Margin ---
-    st.markdown(
-        """
-        <div style='text-align: center; margin-top: 10px;'>
-            <img src='assets/logo.jpg' width='140' style='margin-bottom: 10px;' />
-            <h1 style='margin-bottom: 5px;'>Shree Sai Industries</h1>
-            <h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>
-            <p>Please log in with your credentials to access your department panel.</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # --- Minimize top/bottom padding for full-screen fit ---
+    st.markdown("""
+        <style>
+            .block-container {
+                padding-top: 10px !important;
+                padding-bottom: 10px !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # --- Centered Logo + Welcome Message ---
+    st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+    if os.path.exists("assets/logo.jpg"):
+        st.image("assets/logo.jpg", width=100)
+    else:
+        st.warning("⚠️ 'logo.jpg' not found in /assets.")
+    st.markdown("<h1 style='margin-bottom: 5px;'>Shree Sai Industries</h1>", unsafe_allow_html=True)
+    st.markdown("<h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
+    st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # --- Layout: Left (image), Middle (login), Right (banners) ---
+    # --- Three Column Layout ---
     col1, col2, col3 = st.columns([1.2, 2, 1.5])
 
-    # --- Left Column ---
+    # --- Left: Main Model Image ---
     with col1:
         if os.path.exists("assets/home_banner.jpg"):
             st.image("assets/home_banner.jpg", use_container_width=True)
 
-    # --- Center Column (Login, aligned lower to match left image height) ---
+    # --- Center: Login Box (shifted lower to align with model) ---
     with col2:
-        st.markdown("<div style='margin-top: 100px;'>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 80px;'>", unsafe_allow_html=True)
         st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
         username = st.text_input("Username", key="login_username")
         password = st.text_input("Password", type="password", key="login_password")
@@ -66,31 +73,7 @@ def login_page():
             login_user(username, password)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- Right Column (Product Grid: 2x3 layout) ---
-    with col3:
-        images = [
-            "home_banner1.jpg", "home_banner2.jpg",
-            "product1.jpg", "product2.jpg",
-            "product3.jpg", "product4.jpg"
-        ]
-        for i in range(0, len(images), 2):
-            c1, c2 = st.columns(2)
-            with c1:
-                path1 = f"assets/{images[i]}"
-                if os.path.exists(path1):
-                    st.image(path1, use_container_width=True)
-            with c2:
-                if i + 1 < len(images):
-                    path2 = f"assets/{images[i + 1]}"
-                    if os.path.exists(path2):
-                        st.image(path2, use_container_width=True)
-
-    # --- Footer ---
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown(
-        "<div style='text-align: center; font-size: 22px; font-weight: bold;'>Premium Quality You Can Trust</div>",
-        unsafe_allow_html=True
-    )
+    # --- Right:
 
 # --- Main Menu ---
 def main_menu():
