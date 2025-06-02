@@ -35,7 +35,7 @@ def login_page():
     show_header()
 
     # 🌟 Branding Section with Banners
-    st.image("assets/logo.png", width=120)
+    st.image("assets/logo.jpg", width=120)
     st.markdown("<h2 style='text-align: center;'>Welcome to Shree Sai Salt</h2>", unsafe_allow_html=True)
 
     # Banner and Product Display
