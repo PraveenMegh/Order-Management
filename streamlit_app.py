@@ -62,17 +62,36 @@ def login_page():
             login_user(username, password)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- Right Column (Product Images) ---
     with col3:
-        right_images = [
-            "home_banner1.jpg", "home_banner2.jpg",
-            "product1.jpg", "product2.jpg",
-            "product3.jpg", "product4.jpg"
-        ]
-        for img in right_images:
-            img_path = f"assets/{img}"
-            if os.path.exists(img_path):
-                st.image(img_path, use_container_width=True)
+    # First row: top 2 products side by side
+    r1c1, r1c2 = st.columns(2)
+    with r1c1:
+        if os.path.exists("assets/home_banner1.jpg"):
+            st.image("assets/home_banner1.jpg", use_container_width=True)
+    with r1c2:
+        if os.path.exists("assets/home_banner2.jpg"):
+            st.image("assets/home_banner2.jpg", use_container_width=True)
+
+    # Spacer to reduce vertical gap manually
+    st.markdown("<div style='margin-top: -25px;'></div>", unsafe_allow_html=True)
+
+    # Second row: next 2 images
+    r2c1, r2c2 = st.columns(2)
+    with r2c1:
+        if os.path.exists("assets/product1.jpg"):
+            st.image("assets/product1.jpg", use_container_width=True)
+    with r2c2:
+        if os.path.exists("assets/product2.jpg"):
+            st.image("assets/product2.jpg", use_container_width=True)
+
+    # Third row: final 2 images
+    r3c1, r3c2 = st.columns(2)
+    with r3c1:
+        if os.path.exists("assets/product3.jpg"):
+            st.image("assets/product3.jpg", use_container_width=True)
+    with r3c2:
+        if os.path.exists("assets/product4.jpg"):
+            st.image("assets/product4.jpg", use_container_width=True)
 
     # --- Footer ---
     st.markdown("<hr>", unsafe_allow_html=True)
