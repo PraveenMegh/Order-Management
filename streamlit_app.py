@@ -32,7 +32,7 @@ def return_menu_logout(key_prefix):
         st.session_state['logged_in'] = False
 
 def login_page():
-    st.image("assets/logo.png", width=120)
+    st.image("assets/logo.jpg", width=120)
 
     # Title centered
     st.markdown("<h1 style='text-align: center;'>Shree Sai Industries</h1>", unsafe_allow_html=True)
