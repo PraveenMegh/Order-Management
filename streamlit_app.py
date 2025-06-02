@@ -52,9 +52,6 @@ def login_page():
         if st.button("Login"):
             login_user(username, password)
 
-    with col1:
-        st.image("assets/home_banner.jpg", width=200)
-
     with col2:
         st.markdown("### 🔐 Login to Your Panel")
         username = st.text_input("Username")
