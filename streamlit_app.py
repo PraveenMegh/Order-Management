@@ -95,7 +95,7 @@ def login_page():
         with r3c1:
             if os.path.exists("assets/product3.jpg"):
                 st.image("assets/product3.jpg", use_container_width=True)
-        with r3c2:
+        with r2c1:
             if os.path.exists("assets/product4.jpg"):
                 st.image("assets/product4.jpg", use_container_width=True)
 
