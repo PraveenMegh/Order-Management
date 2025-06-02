@@ -34,37 +34,36 @@ def return_menu_logout(key_prefix):
 def login_page():
     show_header()
 
-    # ✅ Friendly Welcome Message
     st.markdown("### 👋 Welcome to Shree Sai Salt - Order Management System")
     st.markdown("Please log in with your credentials to access your department panel.")
-
     st.title("Login")
+
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
     if st.button("Login", key="login_button"):
-        conn = sqlite3.connect('data/users.db')  # ✅ Correct and consistent with admin_page
-        conn.row_factory = sqlite3.Row  # Optional but makes column access easier
+        conn = sqlite3.connect('data/users.db')  # ✅ Use correct path
+        conn.row_factory = sqlite3.Row
         c = conn.cursor()
         c.execute('SELECT username, password_hash, role, full_name FROM users WHERE username = ?', (username,))
-        result = c.fetchone()
+        row = c.fetchone()
         conn.close()
 
-    if result:
-        stored_pw = result[1]
-        if isinstance(stored_pw, memoryview):
-            stored_pw = stored_pw.tobytes()
-        if bcrypt.checkpw(password.encode(), stored_pw):
-            st.session_state['logged_in'] = True
-            st.session_state['username'] = result[0]
-            st.session_state['role'] = result[2]
-            st.session_state['full_name'] = result[3]
-            st.session_state['page'] = 'Main Menu'
-            st.rerun()
+        if row:
+            stored_hash = row["password_hash"]
+            if isinstance(stored_hash, memoryview):
+                stored_hash = stored_hash.tobytes()
+            if bcrypt.checkpw(password.encode(), stored_hash):
+                st.session_state['logged_in'] = True
+                st.session_state['username'] = row["username"]
+                st.session_state['role'] = row["role"]
+                st.session_state['full_name'] = row["full_name"]
+                st.session_state['page'] = 'Main Menu'
+                st.rerun()
+            else:
+                st.error("❌ Invalid password.")
         else:
-            st.error("Invalid credentials")
-    else:
-        st.error("Invalid credentials")
+            st.error("❌ Username not found.")
 
 # --- Main Menu ---
 def main_menu():
