@@ -622,35 +622,35 @@ def admin_page():
                     st.rerun()
 
     # --- Change My Password (Admin) ---
-if st.session_state['role'] == "Admin":
-    st.markdown("---")
-    st.subheader("🔐 Change My Password")
-    current_user = st.session_state['username']
+    if st.session_state['role'] == "Admin":
+        st.markdown("---")
+        st.subheader("🔐 Change My Password")
+        current_user = st.session_state['username']
 
-    old_pw = st.text_input("Old Password", type="password", key="admin_old_pw")
-    new_pw = st.text_input("New Password", type="password", key="admin_new_pw")
-
-    if st.button("Update My Password", key="update_own_pw"):
-        if not old_pw or not new_pw:
-            st.warning("Please fill both fields.")
-        else:
-            c.execute("SELECT password_hash FROM users WHERE username = ?", (current_user,))
-            row = c.fetchone()
-
-            if row is not None and 'password_hash' in row.keys():
-                stored_pw = row["password_hash"]
-                if isinstance(stored_pw, memoryview):
-                    stored_pw = stored_pw.tobytes()
-
-                if bcrypt.checkpw(old_pw.encode(), stored_pw):
-                    new_hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
-                    c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (new_hashed_pw, current_user))
-                    conn.commit()
-                    st.success("✅ Your password has been updated.")
-                else:
-                    st.error("❌ Old password is incorrect.")
+        old_pw = st.text_input("Old Password", type="password", key="admin_old_pw")
+        new_pw = st.text_input("New Password", type="password", key="admin_new_pw")
+  
+        if st.button("Update My Password", key="update_own_pw"):
+            if not old_pw or not new_pw:
+                st.warning("Please fill both fields.")
             else:
-                st.error("❌ User not found.")
+                c.execute("SELECT password_hash FROM users WHERE username = ?", (current_user,))
+                row = c.fetchone()
+
+                if row is not None and 'password_hash' in row.keys():
+                    stored_pw = row["password_hash"]
+                    if isinstance(stored_pw, memoryview):
+                        stored_pw = stored_pw.tobytes()
+
+                    if bcrypt.checkpw(old_pw.encode(), stored_pw):
+                        new_hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
+                        c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (new_hashed_pw, current_user))
+                        conn.commit()
+                        st.success("✅ Your password has been updated.")
+                    else:
+                        st.error("❌ Old password is incorrect.")
+                else:
+                    st.error("❌ User not found.")
 
     conn.close()
     st.markdown("---")
