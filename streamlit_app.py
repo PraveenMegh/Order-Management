@@ -633,8 +633,9 @@ def admin_page():
 
         if st.button("Update My Password", key="update_own_pw"):
             if not old_pw or not new_pw:
-                st.warning("Please fill both fields.")
-            else:
+                st.warning("⚠️ Please enter both your old and new password.")
+                st.stop()  # ⛔ Prevent further execution
+
                 c.execute("SELECT username, password_hash FROM users WHERE username = ?", (current_user,))
                 row = c.fetchone()
 
