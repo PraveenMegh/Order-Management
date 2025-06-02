@@ -637,10 +637,10 @@ def admin_page():
                 c.execute("SELECT password_hash FROM users WHERE username = ?", (current_user,))
                 row = c.fetchone()
 
-                if row is not None:
-                    stored_pw = row[0]  # Access directly since only one column was fetched
+            if row is not None:
+                stored_pw = row[0]  # Access directly since only one column was fetched
                 if isinstance(stored_pw, memoryview):
-                   stored_pw = stored_pw.tobytes()
+                    stored_pw = stored_pw.tobytes()
                 if bcrypt.checkpw(old_pw.encode(), stored_pw):
                     new_hashed = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
                     c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (new_hashed, current_user))
@@ -649,7 +649,7 @@ def admin_page():
                 else:
                     st.error("❌ Old password is incorrect.")
             else:
-                 st.error("❌ User not found.")
+                st.error("❌ User not found.")
 
     conn.close()
     st.markdown("---")
