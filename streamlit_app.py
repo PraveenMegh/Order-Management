@@ -32,15 +32,17 @@ def return_menu_logout(key_prefix):
         st.session_state['logged_in'] = False
 
 def login_page():
+    
     # --- Centered Logo + Welcome Message with Reduced Top Margin ---
     st.markdown(
         """
         <div style='text-align: center; margin-top: 10px;'>
-            <img src='assets/logo.jpg' width='100' style='margin-bottom: 10px;' />
+            <img src='assets/logo.jpg' width='140' style='margin-bottom: 10px;' />
             <h1 style='margin-bottom: 5px;'>Shree Sai Industries</h1>
             <h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>
-            <p>Please log in with your credentials to access your department panel.</p>
-        </div>
+            
+            <h8>Please log in with your credentials to access your department panel.</p>
+            </div>
         """,
         unsafe_allow_html=True
     )
