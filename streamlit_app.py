@@ -36,8 +36,8 @@ def login_page():
     st.markdown("""
         <style>
             .block-container {
-                padding-top: 5px !important;
-                padding-bottom: 5px !important;
+                padding-top: 3px !important;
+                padding-bottom: 3px !important;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -45,7 +45,7 @@ def login_page():
     # --- Centered logo + heading ---
     st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     if os.path.exists("assets/logo.jpg"):
-        st.image("assets/logo.jpg", width=100)
+        st.image("assets/logo.jpg", width=140)
     st.markdown("<h1 style='margin-bottom: 5px;'>Shree Sai Industries</h1>", unsafe_allow_html=True)
     st.markdown("<h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
     st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
