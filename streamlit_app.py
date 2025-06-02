@@ -40,7 +40,6 @@ def login_page():
             <img src='assets/logo.jpg' width='140' style='margin-bottom: 10px;' />
             <h1 style='margin-bottom: 5px;'>Shree Sai Industries</h1>
             <h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>
-            
             <p>Please log in with your credentials to access your department panel.</p>
         </div>
         """,
