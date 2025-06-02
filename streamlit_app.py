@@ -32,50 +32,41 @@ def return_menu_logout(key_prefix):
         st.session_state['logged_in'] = False
 
 def login_page():
-    show_header()
+    st.image("assets/logo.png", width=120)
 
+    # Title centered
+    st.markdown("<h1 style='text-align: center;'>Shree Sai Industries</h1>", unsafe_allow_html=True)
+
+    # Welcome message
     st.markdown("### 👋 Welcome to Shree Sai Salt - Order Management System")
     st.markdown("Please log in with your credentials to access your department panel.")
-    st.title("Login")
 
-    # Home Banner (small and left-aligned)
-    st.markdown("""
-        <div style='text-align: left;'>
-            <img src='assets/home_banner.jpg' width='250'>
-        </div>
-    """, unsafe_allow_html=True)
+    # Layout for logo + login
+    col1, col2 = st.columns([1, 3])
 
-    # Login form section
-    st.markdown("""
-        <hr style='border: 1px solid #eee;'>
-        <h3 style='text-align:center;'>🔐 Login to Your Panel</h3>
-    """, unsafe_allow_html=True)
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        login_user(username, password)
+    with col1:
+        st.image("assets/home_banner.jpg", width=200)
 
-    # Product banners layout
-    st.markdown("""
-        <div style='display: flex; justify-content: center; gap: 50px; margin-top: 30px;'>
-            <div style='text-align: center;'>
-                <img src='assets/home_banner1.jpg' width='200'>
-                <p><strong>Premium Product 1</strong></p>
-            </div>
-            <div style='text-align: center;'>
-                <img src='assets/home_banner2.jpg' width='200'>
-                <p><strong>Premium Product 2</strong></p>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+    with col2:
+        st.markdown("### 🔐 Login to Your Panel")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.button("Login"):
+            login_user(username, password)
+
+    # Product images below login form
+    st.markdown("---")
+    col3, col4 = st.columns([1, 1])
+    with col3:
+        st.image("assets/home_banner1.jpg", width=200)
+        st.markdown("**Premium Product 1**", unsafe_allow_html=True)
+    with col4:
+        st.image("assets/home_banner2.jpg", width=200)
+        st.markdown("**Premium Product 2**", unsafe_allow_html=True)
 
     # Footer slogan
-    st.markdown("""
-        <hr style='border: 1px solid #eee;'>
-        <div style='text-align: center; font-size: 22px; font-weight: bold;'>
-            Premium Quality You Can Trust
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; font-size: 22px; font-weight: bold;'>Premium Quality You Can Trust</div>", unsafe_allow_html=True)
 
 # --- Main Menu ---
 def main_menu():
