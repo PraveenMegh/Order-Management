@@ -43,7 +43,8 @@ def login_page():
     password = st.text_input("Password", type="password")
 
     if st.button("Login", key="login_button"):
-        conn = sqlite3.connect('data/users.db')  # ✅ MUST match admin panel + create_users.py
+        conn = sqlite3.connect('data/users.db')  # ✅ Correct and consistent with admin_page
+        conn.row_factory = sqlite3.Row  # Optional but makes column access easier
         c = conn.cursor()
         c.execute('SELECT username, password_hash, role, full_name FROM users WHERE username = ?', (username,))
         result = c.fetchone()
