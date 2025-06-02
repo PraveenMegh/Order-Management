@@ -35,8 +35,8 @@ def login_page():
     # --- Logo and Heading (Centered) ---
     with st.container():
         st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-        if os.path.exists("assets/logo.png"):
-            st.image("assets/logo.png", width=120)
+        if os.path.exists("assets/logo.jpg"):
+            st.image("assets/logo.jpg", width=120)
         st.markdown("<h1>Shree Sai Industries</h1>", unsafe_allow_html=True)
         st.markdown("<h3>👋 Welcome to Shree Sai Salt - Order Management System</h3>", unsafe_allow_html=True)
         st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
