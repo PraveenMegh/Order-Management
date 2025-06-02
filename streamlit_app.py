@@ -635,14 +635,20 @@ def admin_page():
                 st.warning("Please fill both fields.")
             else:
                 c.execute("SELECT password_hash FROM users WHERE username = ?", (current_user,))
-                stored_hash = c.fetchone()
-                if stored_hash and bcrypt.checkpw(old_pw.encode(), stored_hash["password_hash"]):
-                    hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
-                    c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, current_user))
-                    conn.commit()
-                    st.success("✅ Your password has been updated.")
-                else:
-                    st.error("❌ Old password is incorrect.")
+                row = c.fetchone()
+                if row:
+                    stored_hash = row["password_hash"]
+                    if isinstance(stored_hash, memoryview):  # Convert if needed
+                        stored_hash = stored_hash.tobytes()
+                    if bcrypt.checkpw(old_pw.encode(), stored_hash):
+                        hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
+                        c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, current_user))
+                        conn.commit()
+                        st.success("✅ Your password has been updated.")
+                    else:
+                        st.error("❌ Old password is incorrect.")
+                    else:
+                        st.error("❌ User not found.")
 
     conn.close()
     st.markdown("---")
