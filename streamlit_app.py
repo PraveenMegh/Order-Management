@@ -43,13 +43,17 @@ def login_page():
     password = st.text_input("Password", type="password")
 
     if st.button("Login", key="login_button"):
-        conn = sqlite3.connect('users.db')
+        conn = sqlite3.connect('data/users.db')
         c = conn.cursor()
         c.execute('SELECT username, password_hash, role, full_name FROM users WHERE username = ?', (username,))
         result = c.fetchone()
         conn.close()
 
-        if result and bcrypt.checkpw(password.encode(), result[1]):
+    if result:
+        stored_pw = result[1]
+        if isinstance(stored_pw, memoryview):
+            stored_pw = stored_pw.tobytes()
+        if bcrypt.checkpw(password.encode(), stored_pw):
             st.session_state['logged_in'] = True
             st.session_state['username'] = result[0]
             st.session_state['role'] = result[2]
@@ -58,6 +62,8 @@ def login_page():
             st.rerun()
         else:
             st.error("Invalid credentials")
+    else:
+        st.error("Invalid credentials")
 
 # --- Main Menu ---
 def main_menu():
