@@ -544,12 +544,12 @@ def admin_page():
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
 
-    # --- Create users table only if not exists ---
+    # --- Ensure users table exists ---
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE,
-            password_hash TEXT,
+            password_hash BLOB,
             role TEXT,
             full_name TEXT
         )
@@ -578,7 +578,7 @@ def admin_page():
             except sqlite3.IntegrityError:
                 st.error("⚠️ Username already exists.")
 
-    # --- Manage Existing Users ---
+    # --- Manage Users ---
     st.markdown("---")
     st.subheader("👥 Manage Existing Users")
     c.execute("SELECT user_id, username, role, full_name FROM users ORDER BY user_id")
@@ -596,7 +596,7 @@ def admin_page():
                 if st.button("Update Role", key=f"update_role_{user_id}"):
                     c.execute("UPDATE users SET role = ? WHERE user_id = ?", (updated_role, user_id))
                     conn.commit()
-                    st.success(f"✅ Role updated for '{username}' to {updated_role}")
+                    st.success(f"✅ Role updated for '{username}'")
                     st.rerun()
         with col3:
             new_pw = st.text_input(f"New Password for {username}", type="password", key=f"new_pw_{user_id}")
@@ -615,23 +615,28 @@ def admin_page():
                     st.warning(f"🗑️ User '{username}' deleted.")
                     st.rerun()
 
-    # --- Change My Password (Admin) ---
+    # --- Admin Password Change ---
     if st.session_state['role'] == "Admin":
         st.markdown("---")
         st.subheader("🔐 Change My Password")
         current_user = st.session_state['username']
+
         old_pw = st.text_input("Old Password", type="password", key="admin_old_pw")
-        new_pw = st.text_input("New Password", type="password", key="admin_change_own_pw")
-        if old_pw and new_pw:
-            c.execute("SELECT password_hash FROM users WHERE username = ?", (current_user,))
-            stored_hash = c.fetchone()
-            if stored_hash and bcrypt.checkpw(old_pw.encode(), stored_hash[0]):
-                hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
-                c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, current_user))
-                conn.commit()
-                st.success("✅ Your password has been updated.")
+        new_pw = st.text_input("New Password", type="password", key="admin_new_pw")
+
+        if st.button("Update My Password", key="update_own_pw"):
+            if not old_pw or not new_pw:
+                st.warning("Please fill both fields.")
             else:
-                st.error("❌ Old password is incorrect.")
+                c.execute("SELECT password_hash FROM users WHERE username = ?", (current_user,))
+                result = c.fetchone()
+                if result and bcrypt.checkpw(old_pw.encode(), result[0]):
+                    hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
+                    c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, current_user))
+                    conn.commit()
+                    st.success("✅ Your password has been updated.")
+                else:
+                    st.error("❌ Old password is incorrect.")
 
     conn.close()
     st.markdown("---")
