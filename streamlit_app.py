@@ -31,35 +31,33 @@ def return_menu_logout(key_prefix):
     if st.button("🔒 Logout", key=f"logout_{key_prefix}"):
         st.session_state['logged_in'] = False
 
-import streamlit as st
-import os
-
 def login_page():
-    # --- Logo and Heading (Centered) ---
-    with st.container():
-        st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-        if os.path.exists("assets/logo.jpg"):
-            st.image("assets/logo.jpg", width=120)
-        else:
-            st.warning("⚠️ 'logo.jpg' not found in /assets.")
-        st.markdown("<h1>Shree Sai Industries</h1>", unsafe_allow_html=True)
-        st.markdown("<h3>👋 Welcome to Shree Sai Salt - Order Management System</h3>", unsafe_allow_html=True)
-        st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+    # --- Centered Logo + Welcome Message with Reduced Top Margin ---
+    st.markdown(
+        """
+        <div style='text-align: center; margin-top: 10px;'>
+            <img src='assets/logo.png' width='100' style='margin-bottom: 10px;' />
+            <h1 style='margin-bottom: 5px;'>Shree Sai Industries</h1>
+            <h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>
+            <p>Please log in with your credentials to access your department panel.</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # --- Main Layout: Left (image), Middle (login), Right (banners) ---
+    # --- Layout: Left (image), Middle (login), Right (banners) ---
     col1, col2, col3 = st.columns([1.2, 2, 1.5])
 
-    # --- Left Column (Main Banner) ---
+    # --- Left Column ---
     with col1:
         if os.path.exists("assets/home_banner.jpg"):
             st.image("assets/home_banner.jpg", use_container_width=True)
 
-    # --- Center Column (Login Box shifted down) ---
+    # --- Center Column (Login, aligned lower to match left image height) ---
     with col2:
-        st.markdown("<div style='margin-top: 120px;'>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 100px;'>", unsafe_allow_html=True)
         st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
         username = st.text_input("Username", key="login_username")
         password = st.text_input("Password", type="password", key="login_password")
@@ -67,37 +65,24 @@ def login_page():
             login_user(username, password)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- Right Column (Product Images Layout) ---
+    # --- Right Column (Product Grid: 2x3 layout) ---
     with col3:
-        # First row: top 2 banners side by side
-        r1c1, r1c2 = st.columns(2)
-        with r1c1:
-            if os.path.exists("assets/home_banner1.jpg"):
-                st.image("assets/home_banner1.jpg", use_container_width=True)
-        with r1c2:
-            if os.path.exists("assets/home_banner2.jpg"):
-                st.image("assets/home_banner2.jpg", use_container_width=True)
-
-        # Reduce gap before next row
-        st.markdown("<div style='margin-top: -25px;'></div>", unsafe_allow_html=True)
-
-        # Second row: product 1 and 2
-        r2c1, r2c2 = st.columns(2)
-        with r2c1:
-            if os.path.exists("assets/product1.jpg"):
-                st.image("assets/product1.jpg", use_container_width=True)
-        with r2c2:
-            if os.path.exists("assets/product2.jpg"):
-                st.image("assets/product2.jpg", use_container_width=True)
-
-        # Third row: product 3 and 4
-        r3c1, r3c2 = st.columns(2)
-        with r3c1:
-            if os.path.exists("assets/product3.jpg"):
-                st.image("assets/product3.jpg", use_container_width=True)
-        with r2c1:
-            if os.path.exists("assets/product4.jpg"):
-                st.image("assets/product4.jpg", use_container_width=True)
+        images = [
+            "home_banner1.jpg", "home_banner2.jpg",
+            "product1.jpg", "product2.jpg",
+            "product3.jpg", "product4.jpg"
+        ]
+        for i in range(0, len(images), 2):
+            c1, c2 = st.columns(2)
+            with c1:
+                path1 = f"assets/{images[i]}"
+                if os.path.exists(path1):
+                    st.image(path1, use_container_width=True)
+            with c2:
+                if i + 1 < len(images):
+                    path2 = f"assets/{images[i + 1]}"
+                    if os.path.exists(path2):
+                        st.image(path2, use_container_width=True)
 
     # --- Footer ---
     st.markdown("<hr>", unsafe_allow_html=True)
