@@ -41,8 +41,8 @@ def login_page():
             <h1 style='margin-bottom: 5px;'>Shree Sai Industries</h1>
             <h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>
             
-            <h8>Please log in with your credentials to access your department panel.</p>
-            </div>
+            <p>Please log in with your credentials to access your department panel.</p>
+        </div>
         """,
         unsafe_allow_html=True
     )
