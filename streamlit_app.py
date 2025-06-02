@@ -73,7 +73,6 @@ def login_page():
 
 # --- Main Menu ---
 def main_menu():
-    show_header()
     st.markdown(f"### 👋 Welcome back, **{st.session_state['username']}**!")
     st.info(f"You are logged in as: `{st.session_state['role']}`")
 
