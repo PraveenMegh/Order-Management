@@ -32,20 +32,41 @@ def return_menu_logout(key_prefix):
         st.session_state['logged_in'] = False
 
 def login_page():
+<<<<<<< HEAD
     # --- Remove extra padding to fit on screen ---
     st.markdown("""
         <style>
             .block-container {
                 padding-top: 3px !important;
                 padding-bottom: 3px !important;
+=======
+    # --- Remove default padding to eliminate scroll ---
+    st.markdown("""
+        <style>
+            .block-container {
+                padding-top: 1rem !important;
+                padding-bottom: 1rem !important;
+            }
+            img {
+                margin-top: 0px !important;
+>>>>>>> b669ac1f (🖼️ Update assets: new logo and product images)
             }
         </style>
     """, unsafe_allow_html=True)
 
+<<<<<<< HEAD
     # --- Centered logo + heading ---
     st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     if os.path.exists("assets/logo.jpg"):
         st.image("assets/logo.jpg", width=140)
+=======
+    # --- TOP Centered Logo + Headings ---
+    st.markdown("<div style='text-align: center; margin-top: 0px;'>", unsafe_allow_html=True)
+    if os.path.exists("assets/logo_v2.jpg"):
+        st.image("assets/logo_v2.jpg", width=100)
+    else:
+        st.warning("⚠️ 'logo_v2.jpg' not found in /assets.")
+>>>>>>> b669ac1f (🖼️ Update assets: new logo and product images)
     st.markdown("<h1 style='margin-bottom: 5px;'>Shree Sai Industries</h1>", unsafe_allow_html=True)
     st.markdown("<h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
     st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
@@ -53,17 +74,30 @@ def login_page():
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
+<<<<<<< HEAD
     # --- Three-column layout: Left = model, Center = login, Right = products ---
     col1, col2, col3 = st.columns([1.2, 2, 1.5])
 
     # --- LEFT COLUMN: Model image ---
+=======
+    # --- Layout: Left = model, Center = login, Right = 2+1 product layout ---
+    col1, col2, col3 = st.columns([1.2, 2, 1.5])
+
+    # --- LEFT: Model Image ---
+>>>>>>> b669ac1f (🖼️ Update assets: new logo and product images)
     with col1:
         if os.path.exists("assets/home_banner.jpg"):
             st.image("assets/home_banner.jpg", use_container_width=True)
 
+<<<<<<< HEAD
     # --- CENTER COLUMN: Login box ---
     with col2:
         st.markdown("<div style='margin-top: 80px;'>", unsafe_allow_html=True)
+=======
+    # --- CENTER: Login Panel aligned to top ---
+    with col2:
+        st.markdown("<div style='margin-top: 0px;'>", unsafe_allow_html=True)
+>>>>>>> b669ac1f (🖼️ Update assets: new logo and product images)
         st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
         username = st.text_input("Username", key="login_username")
         password = st.text_input("Password", type="password", key="login_password")
@@ -71,6 +105,7 @@ def login_page():
             login_user(username, password)
         st.markdown("</div>", unsafe_allow_html=True)
 
+<<<<<<< HEAD
     # --- RIGHT COLUMN: 2+1 product layout ---
     with col3:
         # Top row: 2 products side-by-side
@@ -89,6 +124,26 @@ def login_page():
         st.markdown("</div>", unsafe_allow_html=True)
 
     # --- Footer slogan ---
+=======
+    # --- RIGHT: Products (2 top + 1 centered below) ---
+    with col3:
+        # Top row: 2 new products
+        r1c1, r1c2 = st.columns(2)
+        with r1c1:
+            if os.path.exists("assets/product_new1.jpg"):
+                st.image("assets/product_new1.jpg", use_container_width=True)
+        with r1c2:
+            if os.path.exists("assets/product_new2.jpg"):
+                st.image("assets/product_new2.jpg", use_container_width=True)
+
+        # Bottom: 1 product centered below
+        st.markdown("<div style='display: flex; justify-content: center; margin-top: -10px;'>", unsafe_allow_html=True)
+        if os.path.exists("assets/product_new3.jpg"):
+            st.image("assets/product_new3.jpg", width=150)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- Footer ---
+>>>>>>> b669ac1f (🖼️ Update assets: new logo and product images)
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown(
         "<div style='text-align: center; font-size: 22px; font-weight: bold;'>Premium Quality You Can Trust</div>",
