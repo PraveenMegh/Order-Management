@@ -37,6 +37,20 @@ def login_page():
     st.markdown("### 👋 Welcome to Shree Sai Salt - Order Management System")
     st.markdown("Please log in with your credentials to access your department panel.")
     st.title("Login")
+    
+    col1, col2 = st.columns([1, 3])
+
+    with col1:
+        banner_path = "assets/home_banner.jpg"
+        if os.path.exists(banner_path):
+            st.image(banner_path, width=200)
+
+    with col2:
+        st.markdown("### 🔐 Login to Your Panel")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.button("Login"):
+            login_user(username, password)
 
     with col1:
         st.image("assets/home_banner.jpg", width=200)
