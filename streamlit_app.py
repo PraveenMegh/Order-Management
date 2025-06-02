@@ -542,9 +542,10 @@ def admin_page():
     os.makedirs("data", exist_ok=True)
     db_path = os.path.join("data", "users.db")
     conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row  # <-- Important for fetching as dict-like rows
     c = conn.cursor()
 
-    # --- Ensure users table exists ---
+    # --- Create users table only if not exists ---
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -578,13 +579,18 @@ def admin_page():
             except sqlite3.IntegrityError:
                 st.error("⚠️ Username already exists.")
 
-    # --- Manage Users ---
+    # --- Manage Existing Users ---
     st.markdown("---")
     st.subheader("👥 Manage Existing Users")
     c.execute("SELECT user_id, username, role, full_name FROM users ORDER BY user_id")
     users = c.fetchall()
 
-    for user_id, username, role, full_name in users:
+    for user in users:
+        user_id = user["user_id"]
+        username = user["username"]
+        role = user["role"]
+        full_name = user["full_name"]
+
         col1, col2, col3 = st.columns([3, 3, 4])
         with col1:
             st.markdown(f"**{username}**  \n_Full Name_: {full_name}  \n_Role_: {role}")
@@ -596,7 +602,7 @@ def admin_page():
                 if st.button("Update Role", key=f"update_role_{user_id}"):
                     c.execute("UPDATE users SET role = ? WHERE user_id = ?", (updated_role, user_id))
                     conn.commit()
-                    st.success(f"✅ Role updated for '{username}'")
+                    st.success(f"✅ Role updated for '{username}' to {updated_role}")
                     st.rerun()
         with col3:
             new_pw = st.text_input(f"New Password for {username}", type="password", key=f"new_pw_{user_id}")
@@ -615,7 +621,7 @@ def admin_page():
                     st.warning(f"🗑️ User '{username}' deleted.")
                     st.rerun()
 
-    # --- Admin Password Change ---
+    # --- Change My Password (Admin) ---
     if st.session_state['role'] == "Admin":
         st.markdown("---")
         st.subheader("🔐 Change My Password")
@@ -629,8 +635,8 @@ def admin_page():
                 st.warning("Please fill both fields.")
             else:
                 c.execute("SELECT password_hash FROM users WHERE username = ?", (current_user,))
-                result = c.fetchone()
-                if result and bcrypt.checkpw(old_pw.encode(), result[0]):
+                stored_hash = c.fetchone()
+                if stored_hash and bcrypt.checkpw(old_pw.encode(), stored_hash["password_hash"]):
                     hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
                     c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, current_user))
                     conn.commit()
