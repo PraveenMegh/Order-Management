@@ -32,7 +32,7 @@ def return_menu_logout(key_prefix):
         st.session_state['logged_in'] = False
 
 def login_page():
-    # --- Remove default padding to prevent scroll ---
+    # --- Remove extra padding to fit on screen ---
     st.markdown("""
         <style>
             .block-container {
@@ -42,7 +42,7 @@ def login_page():
         </style>
     """, unsafe_allow_html=True)
 
-    # --- Centered Logo + Heading ---
+    # --- Centered logo + heading ---
     st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     if os.path.exists("assets/logo.jpg"):
         st.image("assets/logo.jpg", width=100)
@@ -53,15 +53,15 @@ def login_page():
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # --- Layout: Left (model), Center (login), Right (products) ---
+    # --- Three-column layout: Left = model, Center = login, Right = products ---
     col1, col2, col3 = st.columns([1.2, 2, 1.5])
 
-    # --- LEFT COLUMN: Model Image ---
+    # --- LEFT COLUMN: Model image ---
     with col1:
         if os.path.exists("assets/home_banner.jpg"):
             st.image("assets/home_banner.jpg", use_container_width=True)
 
-    # --- CENTER COLUMN: Login Form ---
+    # --- CENTER COLUMN: Login box ---
     with col2:
         st.markdown("<div style='margin-top: 80px;'>", unsafe_allow_html=True)
         st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
@@ -71,9 +71,9 @@ def login_page():
             login_user(username, password)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- RIGHT COLUMN: Product Layout (2 top + 1 centered below) ---
+    # --- RIGHT COLUMN: 2+1 product layout ---
     with col3:
-        # Row 1: two products side by side
+        # Top row: 2 products side-by-side
         r1c1, r1c2 = st.columns(2)
         with r1c1:
             if os.path.exists("assets/home_banner1.jpg"):
@@ -82,14 +82,18 @@ def login_page():
             if os.path.exists("assets/home_banner2.jpg"):
                 st.image("assets/home_banner2.jpg", use_container_width=True)
 
-        # Row 2: one product centered below
+        # Bottom: 1 product centered
         st.markdown("<div style='display: flex; justify-content: center; margin-top: -10px;'>", unsafe_allow_html=True)
         if os.path.exists("assets/product1.jpg"):
             st.image("assets/product1.jpg", width=150)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- Footer ---
+    # --- Footer slogan ---
+    st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown(
+        "<div style='text-align: center; font-size: 22px; font-weight: bold;'>Premium Quality You Can Trust</div>",
+        unsafe_allow_html=True
+    )
 
 # --- Main Menu ---
 def main_menu():
