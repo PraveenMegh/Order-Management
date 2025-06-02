@@ -31,12 +31,17 @@ def return_menu_logout(key_prefix):
     if st.button("🔒 Logout", key=f"logout_{key_prefix}"):
         st.session_state['logged_in'] = False
 
+import streamlit as st
+import os
+
 def login_page():
     # --- Logo and Heading (Centered) ---
     with st.container():
         st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
         if os.path.exists("assets/logo.jpg"):
-            st.image("assets/logo.jpg", width=140)
+            st.image("assets/logo.jpg", width=120)
+        else:
+            st.warning("⚠️ 'logo.jpg' not found in /assets.")
         st.markdown("<h1>Shree Sai Industries</h1>", unsafe_allow_html=True)
         st.markdown("<h3>👋 Welcome to Shree Sai Salt - Order Management System</h3>", unsafe_allow_html=True)
         st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
@@ -44,7 +49,7 @@ def login_page():
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # --- Main Layout: 3 Columns ---
+    # --- Main Layout: Left (image), Middle (login), Right (banners) ---
     col1, col2, col3 = st.columns([1.2, 2, 1.5])
 
     # --- Left Column (Main Banner) ---
@@ -62,36 +67,37 @@ def login_page():
             login_user(username, password)
         st.markdown("</div>", unsafe_allow_html=True)
 
-   with col3:
-    # First row: top 2 products side by side
-    r1c1, r1c2 = st.columns(2)
-    with r1c1:
-        if os.path.exists("assets/home_banner1.jpg"):
-            st.image("assets/home_banner1.jpg", use_container_width=True)
-    with r1c2:
-        if os.path.exists("assets/home_banner2.jpg"):
-            st.image("assets/home_banner2.jpg", use_container_width=True)
+    # --- Right Column (Product Images Layout) ---
+    with col3:
+        # First row: top 2 banners side by side
+        r1c1, r1c2 = st.columns(2)
+        with r1c1:
+            if os.path.exists("assets/home_banner1.jpg"):
+                st.image("assets/home_banner1.jpg", use_container_width=True)
+        with r1c2:
+            if os.path.exists("assets/home_banner2.jpg"):
+                st.image("assets/home_banner2.jpg", use_container_width=True)
 
-    # Spacer to reduce vertical gap manually
-    st.markdown("<div style='margin-top: -25px;'></div>", unsafe_allow_html=True)
+        # Reduce gap before next row
+        st.markdown("<div style='margin-top: -25px;'></div>", unsafe_allow_html=True)
 
-    # Second row: next 2 images
-    r2c1, r2c2 = st.columns(2)
-    with r2c1:
-        if os.path.exists("assets/product1.jpg"):
-            st.image("assets/product1.jpg", use_container_width=True)
-    with r2c2:
-        if os.path.exists("assets/product2.jpg"):
-            st.image("assets/product2.jpg", use_container_width=True)
+        # Second row: product 1 and 2
+        r2c1, r2c2 = st.columns(2)
+        with r2c1:
+            if os.path.exists("assets/product1.jpg"):
+                st.image("assets/product1.jpg", use_container_width=True)
+        with r2c2:
+            if os.path.exists("assets/product2.jpg"):
+                st.image("assets/product2.jpg", use_container_width=True)
 
-    # Third row: final 2 images
-    r3c1, r3c2 = st.columns(2)
-    with r3c1:
-        if os.path.exists("assets/product3.jpg"):
-            st.image("assets/product3.jpg", use_container_width=True)
-    with r3c2:
-        if os.path.exists("assets/product4.jpg"):
-            st.image("assets/product4.jpg", use_container_width=True)
+        # Third row: product 3 and 4
+        r3c1, r3c2 = st.columns(2)
+        with r3c1:
+            if os.path.exists("assets/product3.jpg"):
+                st.image("assets/product3.jpg", use_container_width=True)
+        with r3c2:
+            if os.path.exists("assets/product4.jpg"):
+                st.image("assets/product4.jpg", use_container_width=True)
 
     # --- Footer ---
     st.markdown("<hr>", unsafe_allow_html=True)
