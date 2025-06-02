@@ -62,7 +62,7 @@ def login_page():
             login_user(username, password)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with col3:
+   with col3:
     # First row: top 2 products side by side
     r1c1, r1c2 = st.columns(2)
     with r1c1:
