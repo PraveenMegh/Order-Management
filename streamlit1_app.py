@@ -34,30 +34,36 @@ def return_menu_logout(key_prefix):
 def login_page():
     show_header()
 
-    # ✅ Friendly Welcome Message
     st.markdown("### 👋 Welcome to Shree Sai Salt - Order Management System")
     st.markdown("Please log in with your credentials to access your department panel.")
-
     st.title("Login")
+
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
     if st.button("Login", key="login_button"):
-        conn = sqlite3.connect('users.db')
+        conn = sqlite3.connect('data/users.db')  # ✅ Use correct path
+        conn.row_factory = sqlite3.Row
         c = conn.cursor()
         c.execute('SELECT username, password_hash, role, full_name FROM users WHERE username = ?', (username,))
-        result = c.fetchone()
+        row = c.fetchone()
         conn.close()
 
-        if result and bcrypt.checkpw(password.encode(), result[1]):
-            st.session_state['logged_in'] = True
-            st.session_state['username'] = result[0]
-            st.session_state['role'] = result[2]
-            st.session_state['full_name'] = result[3]
-            st.session_state['page'] = 'Main Menu'
-            st.rerun()
+        if row:
+            stored_hash = row["password_hash"]
+            if isinstance(stored_hash, memoryview):
+                stored_hash = stored_hash.tobytes()
+            if bcrypt.checkpw(password.encode(), stored_hash):
+                st.session_state['logged_in'] = True
+                st.session_state['username'] = row["username"]
+                st.session_state['role'] = row["role"]
+                st.session_state['full_name'] = row["full_name"]
+                st.session_state['page'] = 'Main Menu'
+                st.rerun()
+            else:
+                st.error("❌ Invalid password.")
         else:
-            st.error("Invalid credentials")
+            st.error("❌ Username not found.")
 
 # --- Main Menu ---
 def main_menu():
@@ -542,6 +548,7 @@ def admin_page():
     os.makedirs("data", exist_ok=True)
     db_path = os.path.join("data", "users.db")
     conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
 
     # --- Create users table only if not exists ---
@@ -549,7 +556,7 @@ def admin_page():
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE,
-            password_hash TEXT,
+            password_hash BLOB,
             role TEXT,
             full_name TEXT
         )
@@ -584,7 +591,12 @@ def admin_page():
     c.execute("SELECT user_id, username, role, full_name FROM users ORDER BY user_id")
     users = c.fetchall()
 
-    for user_id, username, role, full_name in users:
+    for user in users:
+        user_id = user["user_id"]
+        username = user["username"]
+        role = user["role"]
+        full_name = user["full_name"]
+
         col1, col2, col3 = st.columns([3, 3, 4])
         with col1:
             st.markdown(f"**{username}**  \n_Full Name_: {full_name}  \n_Role_: {role}")
@@ -620,18 +632,30 @@ def admin_page():
         st.markdown("---")
         st.subheader("🔐 Change My Password")
         current_user = st.session_state['username']
+
         old_pw = st.text_input("Old Password", type="password", key="admin_old_pw")
-        new_pw = st.text_input("New Password", type="password", key="admin_change_own_pw")
-        if old_pw and new_pw:
-            c.execute("SELECT password_hash FROM users WHERE username = ?", (current_user,))
-            stored_hash = c.fetchone()
-            if stored_hash and bcrypt.checkpw(old_pw.encode(), stored_hash[0]):
-                hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
-                c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, current_user))
-                conn.commit()
-                st.success("✅ Your password has been updated.")
+        new_pw = st.text_input("New Password", type="password", key="admin_new_pw")
+
+        if st.button("Update My Password", key="update_own_pw"):
+            if not old_pw or not new_pw:
+                st.warning("Please fill both fields.")
             else:
-                st.error("❌ Old password is incorrect.")
+                c.execute("SELECT password_hash FROM users WHERE username = ?", (current_user,))
+                row = c.fetchone()
+
+                if row is None:
+                    st.error(f"❌ User '{current_user}' not found in DB.")
+                else:
+                    stored_pw = row["password_hash"]
+                    if isinstance(stored_pw, memoryview):
+                        stored_pw = stored_pw.tobytes()
+                    if bcrypt.checkpw(old_pw.encode(), stored_pw):
+                        hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
+                        c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, current_user))
+                        conn.commit()
+                        st.success("✅ Your password has been updated.")
+                    else:
+                        st.error("❌ Old password is incorrect.")
 
     conn.close()
     st.markdown("---")
