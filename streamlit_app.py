@@ -626,6 +626,7 @@ def admin_page():
         st.markdown("---")
         st.subheader("🔐 Change My Password")
         current_user = st.session_state['username']
+        current_user = current_user.strip().lower()
 
         old_pw = st.text_input("Old Password", type="password", key="admin_old_pw")
         new_pw = st.text_input("New Password", type="password", key="admin_new_pw")
