@@ -32,51 +32,49 @@ def return_menu_logout(key_prefix):
         st.session_state['logged_in'] = False
 
 def login_page():
-    # --- Remove default padding to eliminate scroll ---
     st.markdown("""
         <style>
             .block-container {
-                padding-top: 0.5rem !important;
-                padding-bottom: 0.5rem !important;
+                padding-top: 1rem !important;
+                padding-bottom: 1rem !important;
             }
-            img {
-                margin-top: 0px !important;
+            .center-text {
+                text-align: center;
             }
         </style>
     """, unsafe_allow_html=True)
 
-    # --- TOP CENTERED LOGO + HEADING ---
-    st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-    if os.path.exists("assets/logo.jpg"):
-        st.image("assets/logo.jpg", width=100)
-    else:
-        st.warning("⚠️ 'logo.jpg' not found in /assets.")
-    st.markdown("<h1 style='margin-bottom: 5px;'>Shree Sai Industries</h1>", unsafe_allow_html=True)
-    st.markdown("<h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
-    st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    # --- Top logo and welcome text ---
+    with st.container():
+        st.markdown("<div class='center-text'>", unsafe_allow_html=True)
+        if os.path.exists("assets/logo.jpg"):
+            st.image("assets/logo.jpg", width=100)
+        st.markdown("<h1 style='margin-bottom: 5px;'>Shree Sai Industries</h1>", unsafe_allow_html=True)
+        st.markdown("<h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
+        st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # --- Layout: Left Image | Center Login | Right Images ---
     col1, col2, col3 = st.columns([1.2, 2, 1.6])
 
-    # LEFT: Home Banner Image
+    # --- LEFT image ---
     with col1:
         if os.path.exists("assets/home_banner.jpg"):
             st.image("assets/home_banner.jpg", use_column_width=True)
 
-    # CENTER: Login Panel aligned vertically with bottom of left image
+    # --- CENTER login block with spacer above ---
     with col2:
-        st.markdown("<div style='margin-top: 80px;'>", unsafe_allow_html=True)
+        st.markdown("##")  # spacer line
+        st.markdown("##")  # another spacer
+        st.markdown("##")  # more spacer
         st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
         username = st.text_input("Username", key="login_username")
         password = st.text_input("Password", type="password", key="login_password")
         if st.button("Login", key="login_button"):
             login_user(username, password)
-        st.markdown("</div>", unsafe_allow_html=True)
 
-    # RIGHT: Two Images Vertically
+    # --- RIGHT images ---
     with col3:
         if os.path.exists("assets/home_banner1.jpg"):
             st.image("assets/home_banner1.jpg", use_column_width=True)
