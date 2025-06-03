@@ -36,8 +36,8 @@ def login_page():
     st.markdown("""
         <style>
             .block-container {
-                padding-top: 1rem !important;
-                padding-bottom: 1rem !important;
+                padding-top: 0.5rem !important;
+                padding-bottom: 0.5rem !important;
             }
             img {
                 margin-top: 0px !important;
@@ -45,8 +45,8 @@ def login_page():
         </style>
     """, unsafe_allow_html=True)
 
-    # --- TOP Centered Logo + Headings ---
-    st.markdown("<div style='text-align: center; margin-top: 0px;'>", unsafe_allow_html=True)
+    # --- TOP CENTERED LOGO + HEADING ---
+    st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     if os.path.exists("assets/logo.jpg"):
         st.image("assets/logo.jpg", width=100)
     else:
@@ -58,17 +58,17 @@ def login_page():
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # --- Layout: Left = model, Center = login, Right = 2+1 product layout ---
-    col1, col2, col3 = st.columns([1.2, 2, 1.5])
+    # --- Layout: Left Image | Center Login | Right Images ---
+    col1, col2, col3 = st.columns([1.2, 2, 1.6])
 
-    # --- LEFT: Model Image ---
+    # LEFT: Home Banner Image
     with col1:
         if os.path.exists("assets/home_banner.jpg"):
-            st.image("assets/home_banner.jpg", use_container_width=True)
+            st.image("assets/home_banner.jpg", use_column_width=True)
 
-    # --- CENTER: Login Panel aligned to top ---
+    # CENTER: Login Panel aligned vertically with bottom of left image
     with col2:
-        st.markdown("<div style='margin-top: 0px;'>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 80px;'>", unsafe_allow_html=True)
         st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
         username = st.text_input("Username", key="login_username")
         password = st.text_input("Password", type="password", key="login_password")
@@ -76,22 +76,12 @@ def login_page():
             login_user(username, password)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- RIGHT: Products (2 top + 1 centered below) ---
+    # RIGHT: Two Images Vertically
     with col3:
-        # Top row: 2 new products
-        r1c1, r1c2 = st.columns(2)
-        with r1c1:
-            if os.path.exists("assets/product_new1.jpg"):
-                st.image("assets/product_new1.jpg", use_container_width=True)
-        with r1c2:
-            if os.path.exists("assets/product_new2.jpg"):
-                st.image("assets/product_new2.jpg", use_container_width=True)
-
-        # Bottom: 1 product centered below
-        st.markdown("<div style='display: flex; justify-content: center; margin-top: -10px;'>", unsafe_allow_html=True)
-        if os.path.exists("assets/product_new3.jpg"):
-            st.image("assets/product_new3.jpg", width=150)
-        st.markdown("</div>", unsafe_allow_html=True)
+        if os.path.exists("assets/home_banner1.jpg"):
+            st.image("assets/home_banner1.jpg", use_column_width=True)
+        if os.path.exists("assets/home_banner2.jpg"):
+            st.image("assets/home_banner2.jpg", use_column_width=True)
 
     # --- Footer ---
     st.markdown("<hr>", unsafe_allow_html=True)
