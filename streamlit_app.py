@@ -34,92 +34,62 @@ def return_menu_logout(key_prefix):
 def login_page():
     st.markdown("""
         <style>
-            .centered-logo {
-                text-align: center;
-                margin-bottom: 10px;
+            .block-container {
+                padding-top: 1rem !important;
+                padding-bottom: 1rem !important;
             }
-            .top-section {
-                text-align: center;
-                padding-top: 10px;
-            }
-            .login-layout {
+            .login-container {
                 display: flex;
-                flex-direction: row;
-                justify-content: center;
+                justify-content: space-between;
                 align-items: flex-start;
-                margin-top: 20px;
-                gap: 30px;
+                gap: 2rem;
             }
             .left-img, .right-imgs {
-                flex: 1;
+                width: 30%;
             }
-            .login-box {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                justify-content: flex-end;
-                height: 100%;
-            }
-            .login-card {
+            .login-form {
+                width: 40%;
+                margin-top: 60px;
                 padding: 20px;
                 border: 1px solid #ddd;
                 border-radius: 10px;
-                box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
-            }
-            .footer {
-                text-align: center;
-                margin-top: 30px;
-                font-weight: bold;
-                font-size: 20px;
+                background-color: #f9f9f9;
+                box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
             }
         </style>
     """, unsafe_allow_html=True)
 
-    # --- TOP: Logo + Headings ---
-    st.markdown("<div class='centered-logo'>", unsafe_allow_html=True)
+    # Header
+    st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
     if os.path.exists("assets/logo.jpg"):
         st.image("assets/logo.jpg", width=100)
-    st.markdown("""
-        <div class='top-section'>
-            <h1>Shree Sai Industries</h1>
-            <h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>
-            <p>Please log in with your credentials to access your department panel.</p>
-        </div>
-    """, unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<h1>Shree Sai Industries</h1>", unsafe_allow_html=True)
+    st.markdown("<h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
+    st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
+    st.markdown("</div><hr>", unsafe_allow_html=True)
 
-    # --- BODY: Custom Layout with Flex ---
-    st.markdown("<div class='login-layout'>", unsafe_allow_html=True)
+    # Layout using columns
+    col1, col2, col3 = st.columns([1.2, 2, 1.6])
 
-    # LEFT IMAGE
-    st.markdown("<div class='left-img'>", unsafe_allow_html=True)
-    if os.path.exists("assets/home_banner.jpg"):
-        st.image("assets/home_banner.jpg", use_column_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    with col1:
+        if os.path.exists("assets/home_banner.jpg"):
+            st.image("assets/home_banner.jpg", use_container_width=True)
 
-    # LOGIN PANEL
-    st.markdown("<div class='login-box'>", unsafe_allow_html=True)
-    st.markdown("<div class='login-card'>", unsafe_allow_html=True)
-    st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
-    username = st.text_input("Username", key="login_username")
-    password = st.text_input("Password", type="password", key="login_password")
-    if st.button("Login", key="login_button"):
-        login_user(username, password)
-    st.markdown("</div>", unsafe_allow_html=True)  # end login card
-    st.markdown("</div>", unsafe_allow_html=True)  # end login-box
+    with col2:
+        st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
+        username = st.text_input("Username", key="login_username")
+        password = st.text_input("Password", type="password", key="login_password")
+        if st.button("Login", key="login_button"):
+            login_user(username, password)
 
-    # RIGHT IMAGES
-    st.markdown("<div class='right-imgs'>", unsafe_allow_html=True)
-    if os.path.exists("assets/home_banner1.jpg"):
-        st.image("assets/home_banner1.jpg", use_column_width=True)
-    if os.path.exists("assets/home_banner2.jpg"):
-        st.image("assets/home_banner2.jpg", use_column_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    with col3:
+        if os.path.exists("assets/home_banner1.jpg"):
+            st.image("assets/home_banner1.jpg", use_container_width=True)
+        if os.path.exists("assets/home_banner2.jpg"):
+            st.image("assets/home_banner2.jpg", use_container_width=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)  # end login-layout
-
-    # --- FOOTER ---
-    st.markdown("<div class='footer'>Premium Quality You Can Trust</div>", unsafe_allow_html=True)
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center;font-size:20px;'>Premium Quality You Can Trust</div>", unsafe_allow_html=True)
 
 # --- Main Menu ---
 def main_menu():
