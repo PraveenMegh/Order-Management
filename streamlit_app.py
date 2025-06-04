@@ -105,7 +105,7 @@ def login_page():
         if os.path.exists("assets/home_banner1.jpg"):
             right_img = Image.open("assets/home_banner1.jpg")
             right_img.thumbnail((400, 300))  # Match size with left
-            st.image(right_img)
+        st.image(right_img)
 
     # Footer
     st.markdown("<hr>", unsafe_allow_html=True)
@@ -696,7 +696,9 @@ def admin_page():
                     hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
                     c.execute("UPDATE users SET password_hash = ? WHERE user_id = ?", (hashed_pw, user_id))
                     conn.commit()
-                    st.succ
+                    st.success
+    conn.close()
+    return_menu_logout("admin")
 
 def main_app():
     st.sidebar.write("📁 DB Path:")
