@@ -73,14 +73,6 @@ def login_page():
     """, unsafe_allow_html=True)
 
     # Header
-    st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
-    if os.path.exists("assets/logo.jpg"):
-        st.image("assets/logo.jpg", width=100)
-    st.markdown("<h1>Shree Sai Industries</h1>", unsafe_allow_html=True)
-    st.markdown("<h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
-    st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
-    st.markdown("</div><hr>", unsafe_allow_html=True)
-
     # --- TOP CENTERED HEADER ---
     st.markdown("<div class='center-header'>", unsafe_allow_html=True)
     if os.path.exists("assets/logo.jpg"):
@@ -89,21 +81,16 @@ def login_page():
     st.markdown("<h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-    # Layout using columns
+    # --- Layout using columns ---
     col1, col2, col3 = st.columns([1.2, 2, 1.6])
 
-    # --- Page Layout: Left Image | Login Form | Right Images ---
-    col1, col2, col3 = st.columns([1.2, 2, 1.6])
-
-    # LEFT IMAGE
+    # --- LEFT IMAGE ---
     with col1:
         if os.path.exists("assets/home_banner.jpg"):
-            st.image("assets/home_banner.jpg", use_container_width=True)
+            img_left = Image.open("assets/home_banner.jpg").resize((300, 420))
+            st.image(img_left)
 
-    with col2:
-
-    # LOGIN PANEL
+    # --- LOGIN CENTER ---
     with col2:
         st.markdown("<p class='login-instruction'>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
         st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
@@ -112,18 +99,11 @@ def login_page():
         if st.button("Login", key="login_button"):
             login_user(username, password)
 
+    # --- RIGHT IMAGE ---
     with col3:
         if os.path.exists("assets/home_banner1.jpg"):
-            st.image("assets/home_banner1.jpg", use_container_width=True)
-        if os.path.exists("assets/home_banner2.jpg"):
-            st.image("assets/home_banner2.jpg", use_container_width=True)
-
-
-    # RIGHT IMAGES (Stacked neatly)
-    with col3:
-        if os.path.exists("assets/home_banner1.jpg"):
-            img1 = Image.open("assets/home_banner1.jpg").resize((300, 350))
-            st.image(img1)
+            img_right = Image.open("assets/home_banner1.jpg").resize((300, 420))
+            st.image(img_right)
 
     # Footer
     st.markdown("<hr>", unsafe_allow_html=True)
