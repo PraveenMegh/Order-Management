@@ -276,6 +276,16 @@ def sales_page(admin_view=False):
     conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
 
+    # --- Show user photo (if exists) ---
+    image_path = f"assets/users/{username}.jpg"
+    alt_path = f"assets/users/{username}.jpg"
+    col1, col2 = st.columns([6, 1.5])
+    with col2:
+        if os.path.exists(image_path):
+            st.image(image_path, caption=username.capitalize(), width=100)
+        elif os.path.exists(alt_path):
+            st.image(alt_path, caption=username.capitalize(), width=100)
+
     # --- Upload buyer Excel file (Only Admin can replace it) ---
     if st.session_state['role'] == 'Admin':
         uploaded_file = st.file_uploader("Upload Buyer Excel File", type=["xlsx"])
@@ -466,7 +476,7 @@ def dispatch_page(admin_view=False):
 
     # --- Show user photo (if exists) ---
     image_path = f"assets/users/{username}.jpg"
-    alt_path = f"assets/users/{username}.png"
+    alt_path = f"assets/users/{username}.jpg"
     col1, col2 = st.columns([6, 1.5])
     with col2:
         if os.path.exists(image_path):
@@ -616,7 +626,7 @@ def admin_page():
 
     # --- Show profile photo (if exists) ---
     image_path = f"assets/users/{username}.jpg"
-    alt_path = f"assets/users/{username}.png"
+    alt_path = f"assets/users/{username}.jpg"
     col1, col2 = st.columns([6, 1.5])
     with col2:
         if os.path.exists(image_path):
