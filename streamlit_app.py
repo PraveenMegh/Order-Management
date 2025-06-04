@@ -84,11 +84,12 @@ def login_page():
     # --- Layout using columns ---
     col1, col2, col3 = st.columns([1.2, 2, 1.6])
 
-    # --- LEFT IMAGE ---
+    # LEFT IMAGE
     with col1:
         if os.path.exists("assets/home_banner.jpg"):
-            img_left = Image.open("assets/home_banner.jpg").resize((300, 450))
-            st.image(img_left)
+            left_img = Image.open("assets/home_banner.jpg")
+            left_img.thumbnail((400, 300))  # Slightly larger but uniform
+            st.image(left_img)
 
     # --- LOGIN CENTER ---
     with col2:
@@ -99,11 +100,12 @@ def login_page():
         if st.button("Login", key="login_button"):
             login_user(username, password)
 
-    # --- RIGHT IMAGE ---
+    # RIGHT IMAGE
     with col3:
         if os.path.exists("assets/home_banner1.jpg"):
-            img_right = Image.open("assets/home_banner1.jpg").resize((300, 450))
-            st.image(img_right)
+            right_img = Image.open("assets/home_banner1.jpg")
+            right_img.thumbnail((400, 300))  # Match size with left
+            st.image(right_img)
 
     # Footer
     st.markdown("<hr>", unsafe_allow_html=True)
