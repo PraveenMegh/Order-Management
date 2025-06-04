@@ -87,7 +87,7 @@ def login_page():
     # --- LEFT IMAGE ---
     with col1:
         if os.path.exists("assets/home_banner.jpg"):
-            img_left = Image.open("assets/home_banner.jpg").resize((300, 420))
+            img_left = Image.open("assets/home_banner.jpg").resize((300, 200))
             st.image(img_left)
 
     # --- LOGIN CENTER ---
@@ -102,7 +102,7 @@ def login_page():
     # --- RIGHT IMAGE ---
     with col3:
         if os.path.exists("assets/home_banner1.jpg"):
-            img_right = Image.open("assets/home_banner1.jpg").resize((300, 420))
+            img_right = Image.open("assets/home_banner1.jpg").resize((300, 200))
             st.image(img_right)
 
     # Footer
