@@ -13,7 +13,7 @@ users = [
     ("madhu.sharma", "madhu798", "Sales", "Madhu Sharma"),
     ("vipin.dabas", "vipin123", "Sales", "Vipin Dabas"),
     ("delhi.team", "delhi@sales123", "Sales", "Deepak Aggarwal"),
-    ("ahay.sharma", "ajay1976", "Dispatch", "Ajay Sharma"),
+    ("ajay.sharma", "ajay1976", "Dispatch", "Ajay Sharma"),
     ("amit.jawla", "amit0525", "Dispatch", "Amit Jawla"),
 ]
 

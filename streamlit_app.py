@@ -479,8 +479,9 @@ def dispatch_page(admin_view=False):
     alt_path = f"assets/users/{username}.jpg"
     col1, col2 = st.columns([6, 1.5])
     with col2:
-        if os.path.exists(image_path):
-            st.image(image_path, caption=username.capitalize(), width=100)
+        if os.path.exists("assets/users/username.jpg"):
+            st.image("assets/users/amit.jpg", width=100)
+            st.image("assets/users/ajay.jpg", width=120)
         elif os.path.exists(alt_path):
             st.image(alt_path, caption=username.capitalize(), width=100)
 
