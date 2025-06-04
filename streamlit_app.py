@@ -4,6 +4,7 @@ import bcrypt
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
+from PIL import Image
 import os
 
 # --- Safe DB close helper ---
@@ -19,8 +20,8 @@ def show_header():
         st.image("assets/logo.jpg", width=140)
     with col2:
         st.markdown("""
-            <div style='display: flex; align-items: center; height: 120px;'>
-                <h1 style='margin: 0; padding-left: 0px;'>Shree Sai Industries</h1>
+            <div style='display: flex; align-items: center; height: 90px;'>
+                <h1 style='margin: 2; padding-left: 0px;'>Shree Sai Industries</h1>
             </div>
         """, unsafe_allow_html=True)
 
@@ -35,9 +36,10 @@ def login_page():
     st.markdown("""
         <style>
             .block-container {
-                padding-top: 1rem !important;
-                padding-bottom: 1rem !important;
+                padding-top: 2rem !important;
+                padding-bottom: 6rem !important;
             }
+
             .login-container {
                 display: flex;
                 justify-content: space-between;
@@ -55,6 +57,17 @@ def login_page():
                 border-radius: 10px;
                 background-color: #f9f9f9;
                 box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+
+            .middle-header {
+                text-align: middle;
+                margin-top: -20px;
+                margin-bottom: 10px;
+            }
+            .login-instruction {
+                font-size: 15px;
+                margin-bottom: -10px;
+                margin-top: -20px;
+                color: #333333;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -68,14 +81,31 @@ def login_page():
     st.markdown("<p>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
     st.markdown("</div><hr>", unsafe_allow_html=True)
 
+    # --- TOP CENTERED HEADER ---
+    st.markdown("<div class='center-header'>", unsafe_allow_html=True)
+    if os.path.exists("assets/logo.jpg"):
+        st.image("assets/logo.jpg", width=140)
+    st.markdown("<h1>Shree Sai Industries</h1>", unsafe_allow_html=True)
+    st.markdown("<h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
     # Layout using columns
     col1, col2, col3 = st.columns([1.2, 2, 1.6])
 
+    # --- Page Layout: Left Image | Login Form | Right Images ---
+    col1, col2, col3 = st.columns([1.2, 2, 1.6])
+
+    # LEFT IMAGE
     with col1:
         if os.path.exists("assets/home_banner.jpg"):
             st.image("assets/home_banner.jpg", use_container_width=True)
 
     with col2:
+
+    # LOGIN PANEL
+    with col2:
+        st.markdown("<p class='login-instruction'>Please log in with your credentials to access your department panel.</p>", unsafe_allow_html=True)
         st.markdown("#### 🔐 Login to Your Panel", unsafe_allow_html=True)
         username = st.text_input("Username", key="login_username")
         password = st.text_input("Password", type="password", key="login_password")
@@ -88,6 +118,14 @@ def login_page():
         if os.path.exists("assets/home_banner2.jpg"):
             st.image("assets/home_banner2.jpg", use_container_width=True)
 
+
+    # RIGHT IMAGES (Stacked neatly)
+    with col3:
+        if os.path.exists("assets/home_banner1.jpg"):
+            img1 = Image.open("assets/home_banner1.jpg").resize((300, 350))
+            st.image(img1)
+
+    # Footer
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown("<div style='text-align:center;font-size:20px;'>Premium Quality You Can Trust</div>", unsafe_allow_html=True)
 
@@ -247,10 +285,11 @@ def reports_page():
 
 def sales_page(admin_view=False):
     show_header()
+
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
     st.info("You're on the Sales Orders page.")
 
-    username = st.session_state.get('username')
+    username = st.session_state.get('username', '')
     conn = sqlite3.connect('orders.db')
     conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
@@ -272,7 +311,6 @@ def sales_page(admin_view=False):
             buyer_names = buyer_df["Buyer Name"].dropna().unique().tolist()
         except Exception as e:
             st.warning(f"⚠️ Error reading buyers.xlsx: {e}")
-            buyer_df = None
     else:
         st.info("📂 Buyer list not found. Please ask Admin to upload 'buyers.xlsx'.")
 
@@ -304,19 +342,12 @@ def sales_page(admin_view=False):
     # --- Auto-generate Order Number ---
     c.execute("SELECT order_no FROM orders ORDER BY order_id DESC LIMIT 1")
     last_order = c.fetchone()
-    if last_order:
-        try:
-            last_num = int(last_order[0].split('-')[-1])
-        except:
-            last_num = 0
-    else:
-        last_num = 0
-
+    last_num = int(last_order[0].split('-')[-1]) if last_order else 0
     new_order_no = f"ORD-{last_num + 1:04d}"
     st.markdown(f"### 🆕 Auto-Generated Order Number: `{new_order_no}`")
 
     # --- Order Info ---
-    order_no = new_order_no  # override text_input and use auto-generated value
+    order_no = new_order_no
     order_date = st.date_input("Order Date", datetime.today(), key="sales_order_date")
     urgent_flag = st.checkbox("Mark as Urgent", key="sales_urgent_flag")
 
@@ -446,10 +477,21 @@ def sales_page(admin_view=False):
 
 def dispatch_page(admin_view=False):
     show_header()
-    st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
+
+    username = st.session_state.get('username', 'User')
+    st.markdown(f"### 👋 Welcome back, **{username}**!")
     st.info("You're on the 📦 Dispatch Panel.")
 
-    username = st.session_state.get('username')
+    # --- Show user photo (if exists) ---
+    image_path = f"assets/users/{username}.jpg"
+    alt_path = f"assets/users/{username}.png"
+    col1, col2 = st.columns([6, 1.5])
+    with col2:
+        if os.path.exists(image_path):
+            st.image(image_path, caption=username.capitalize(), width=100)
+        elif os.path.exists(alt_path):
+            st.image(alt_path, caption=username.capitalize(), width=100)
+
     conn = sqlite3.connect('orders.db')
     conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
@@ -457,7 +499,7 @@ def dispatch_page(admin_view=False):
     pending_orders = []
     dispatched_orders = []
 
-    # --- Existing Orders List ---
+    # --- Original Orders ---
     st.subheader("📋 Original Order")
     try:
         c.execute('''
@@ -475,14 +517,19 @@ def dispatch_page(admin_view=False):
             )
 
             c.execute('''
-                SELECT product_name, SUM(CASE WHEN status = 'Original' THEN quantity ELSE 0 END) as Original_Qty,
+                SELECT product_name,
+                       SUM(CASE WHEN status = 'Original' THEN quantity ELSE 0 END) as Original_Qty,
                        SUM(CASE WHEN status = 'Dispatched' THEN quantity ELSE 0 END) as Dispatched_Qty,
-                       unit, MAX(price_inr) as Price_INR, MAX(price_usd) as Price_USD
+                       unit,
+                       MAX(price_inr) as Price_INR,
+                       MAX(price_usd) as Price_USD
                 FROM order_products
                 WHERE order_id = ?
                 GROUP BY product_name, unit
             ''', (order_id,))
-            df = pd.DataFrame(c.fetchall(), columns=['Product Name', 'Original Qty', 'Dispatched Qty', 'Unit', 'Price INR', 'Price USD'])
+            df = pd.DataFrame(c.fetchall(), columns=[
+                'Product Name', 'Original Qty', 'Dispatched Qty', 'Unit', 'Price INR', 'Price USD'
+            ])
 
             df['Original Qty'] = df['Original Qty'].astype(float)
             df['Dispatched Qty'] = df['Dispatched Qty'].astype(float)
@@ -491,12 +538,16 @@ def dispatch_page(admin_view=False):
             df['Total INR'] = df['Original Qty'] * df['Price INR']
             df['Total USD'] = df['Original Qty'] * df['Price USD']
 
-            st.data_editor(df[['Product Name', 'Original Qty', 'Unit', 'Price INR', 'Price USD', 'Total INR', 'Total USD']], disabled=True, use_container_width=True, key=f"view_table_{order_id}")
+            st.data_editor(
+                df[['Product Name', 'Original Qty', 'Unit', 'Price INR', 'Price USD', 'Total INR', 'Total USD']],
+                disabled=True,
+                use_container_width=True,
+                key=f"view_table_{order_id}"
+            )
 
-            total_inr = df['Total INR'].sum()
-            total_usd = df['Total USD'].sum()
-            st.markdown(f"**🧾 Grand Total INR:** ₹ {total_inr:,.2f} | **USD:** $ {total_usd:,.2f}")
+            st.markdown(f"**🧾 Grand Total INR:** ₹ {df['Total INR'].sum():,.2f} | **USD:** $ {df['Total USD'].sum():,.2f}")
 
+            # --- Dispatch Entry ---
             st.subheader("✏️ Edit Order")
             st.info("Edit and adjust dispatch quantities below.")
 
@@ -504,19 +555,27 @@ def dispatch_page(admin_view=False):
             editable_df['Dispatch Qty'] = 0.0
             editable_df['Currency'] = 'INR'
             editable_df['Price'] = 0.0
+
             column_config = {
-                "Unit": st.column_config.SelectboxColumn("Unit", options=['KG', 'Nos']),
-                "Currency": st.column_config.SelectboxColumn("Currency", options=['INR', 'USD'])
+                "Unit": st.column_config.SelectboxColumn("Unit", options=["KG", "Nos"]),
+                "Currency": st.column_config.SelectboxColumn("Currency", options=["INR", "USD"])
             }
-            edited = st.data_editor(editable_df, column_config=column_config, num_rows='dynamic', key=f"edit_order_{order_id}")
+
+            edited = st.data_editor(
+                editable_df,
+                column_config=column_config,
+                num_rows='dynamic',
+                key=f"edit_order_{order_id}"
+            )
 
             if st.button("🚀 Submit Dispatch", key=f"submit_dispatch_{order_id}"):
                 try:
                     for _, row in edited.iterrows():
                         if row['Product Name'] and float(row['Dispatch Qty']) > 0:
                             c.execute('''
-                                INSERT INTO order_products (order_id, product_name, quantity, unit, price_inr, price_usd, status)
-                                VALUES (?, ?, ?, ?, ?, ?, 'Dispatched')
+                                INSERT INTO order_products (
+                                    order_id, product_name, quantity, unit, price_inr, price_usd, status
+                                ) VALUES (?, ?, ?, ?, ?, ?, 'Dispatched')
                             ''', (
                                 order_id,
                                 row['Product Name'],
@@ -531,6 +590,7 @@ def dispatch_page(admin_view=False):
                 except Exception as e:
                     st.error(f"❌ Error submitting dispatch: {e}")
 
+            # --- Collect Pending & Dispatched Info ---
             balance_df = df[df['Balance Qty'] > 0][['Product Name', 'Balance Qty']].copy()
             if not balance_df.empty:
                 balance_df.insert(0, 'Order ID', order_id)
@@ -546,7 +606,7 @@ def dispatch_page(admin_view=False):
     except Exception as e:
         st.error(f"⚠️ Error fetching orders: {e}")
 
-    # --- Combined Pending Orders ---
+    # --- Pending Summary ---
     if pending_orders:
         st.subheader("⏳ Pending Orders")
         full_pending_df = pd.concat(pending_orders, ignore_index=True)
@@ -554,7 +614,7 @@ def dispatch_page(admin_view=False):
     else:
         st.info("✅ No pending orders.")
 
-    # --- Combined Dispatched Orders ---
+    # --- Dispatched Summary ---
     if dispatched_orders:
         st.subheader("🚚 Dispatched Orders")
         full_dispatched_df = pd.concat(dispatched_orders, ignore_index=True)
@@ -568,8 +628,19 @@ def dispatch_page(admin_view=False):
 def admin_page():
     show_header()
 
-    st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username')}**!")
+    username = st.session_state.get('username', 'Admin')
+    st.markdown(f"### 👋 Welcome back, **{username}**!")
     st.info("You're on the Admin Panel.")
+
+    # --- Show profile photo (if exists) ---
+    image_path = f"assets/users/{username}.jpg"
+    alt_path = f"assets/users/{username}.png"
+    col1, col2 = st.columns([6, 1.5])
+    with col2:
+        if os.path.exists(image_path):
+            st.image(image_path, caption=username.capitalize(), width=100)
+        elif os.path.exists(alt_path):
+            st.image(alt_path, caption=username.capitalize(), width=100)
 
     os.makedirs("data", exist_ok=True)
     db_path = os.path.join("data", "users.db")
@@ -643,49 +714,7 @@ def admin_page():
                     hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
                     c.execute("UPDATE users SET password_hash = ? WHERE user_id = ?", (hashed_pw, user_id))
                     conn.commit()
-                    st.success(f"🔐 Password reset for '{username}'")
-                    st.rerun()
-
-            if username != "admin":
-                if st.button("❌ Delete", key=f"delete_{user_id}"):
-                    c.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
-                    conn.commit()
-                    st.warning(f"🗑️ User '{username}' deleted.")
-                    st.rerun()
-
-    # --- Change My Password (Admin) ---
-    if st.session_state['role'] == "Admin":
-        st.markdown("---")
-        st.subheader("🔐 Change My Password")
-        current_user = st.session_state['username']
-
-        old_pw = st.text_input("Old Password", type="password", key="admin_old_pw")
-        new_pw = st.text_input("New Password", type="password", key="admin_new_pw")
-
-        if st.button("Update My Password", key="update_own_pw"):
-            if not old_pw or not new_pw:
-                st.warning("Please fill both fields.")
-            else:
-                c.execute("SELECT password_hash FROM users WHERE username = ?", (current_user,))
-                row = c.fetchone()
-
-                if row is None:
-                    st.error(f"❌ User '{current_user}' not found in DB.")
-                else:
-                    stored_pw = row["password_hash"]
-                    if isinstance(stored_pw, memoryview):
-                        stored_pw = stored_pw.tobytes()
-                    if bcrypt.checkpw(old_pw.encode(), stored_pw):
-                        hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
-                        c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, current_user))
-                        conn.commit()
-                        st.success("✅ Your password has been updated.")
-                    else:
-                        st.error("❌ Old password is incorrect.")
-
-    conn.close()
-    st.markdown("---")
-    return_menu_logout("admin")
+                    st.succ
 
 def main_app():
     st.sidebar.write("📁 DB Path:")
