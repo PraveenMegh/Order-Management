@@ -659,7 +659,7 @@ def dispatch_page(admin_view=False):
 def admin_page():
     show_header()
 
-    username = st.session_state.get('username', 'Madhu Sharma')
+    username = st.session_state.get('username', 'madhu.sharma')
     username_lower = username.lower()
     possible_extensions = ['jpg', 'png', 'jpeg']
 
