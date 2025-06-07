@@ -25,6 +25,33 @@ def show_header():
             </div>
         """, unsafe_allow_html=True)
 
+def show_user_profile_photo():
+    username = st.session_state.get('username', 'user')
+    username_lower = username.lower()
+    possible_extensions = ['jpg', 'png', 'jpeg']
+
+    found = False
+    for ext in possible_extensions:
+        image_path = f"assets/users/{username_lower}.{ext}"
+        if os.path.exists(image_path):
+            col1, col2 = st.columns([6, 1.5])
+            with col2:
+                st.image(image_path, caption=username.capitalize(), width=100)
+            found = True
+            break
+
+    if not found:
+        default_image_path = "assets/users/default.jpg"
+        if os.path.exists(default_image_path):
+            col1, col2 = st.columns([6, 1.5])
+            with col2:
+                st.image(default_image_path, caption="No Photo", width=100)
+        else:
+            col1, col2 = st.columns([6, 1.5])
+            with col2:
+                st.info("No profile photo found.")
+
+
 def return_menu_logout(key_prefix):
     st.markdown("---")
     if st.button("⬅ Return to Main Menu", key=f"return_main_{key_prefix}"):
@@ -268,23 +295,29 @@ def reports_page():
 def sales_page(admin_view=False):
     show_header()
 
-    st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
-    st.info("You're on the Sales Orders page.")
+    username = st.session_state.get('username', 'user')
+    username_lower = username.lower()
+    possible_extensions = ['jpg', 'png', 'jpeg']
 
-    username = st.session_state.get('username', '')
+    found = False
+    for ext in possible_extensions:
+        image_path = f"assets/users/{username_lower}.{ext}"
+        if os.path.exists(image_path):
+            col1, col2 = st.columns([6, 1.5])
+            with col2:
+                st.image(image_path, caption=username.capitalize(), width=100)
+            found = True
+            break
+
+    if not found:
+        col1, col2 = st.columns([6, 1.5])
+        with col2:
+            st.info("No profile photo found.")
+    
+    # --- DB connection ---
     conn = sqlite3.connect('orders.db')
     conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
-
-    # --- Show user photo (if exists) ---
-    image_path = f"assets/users/{username}.jpg"
-    alt_path = f"assets/users/{username}.jpg"
-    col1, col2 = st.columns([6, 1.5])
-    with col2:
-        if os.path.exists(image_path):
-            st.image(image_path, caption=username.capitalize(), width=100)
-        elif os.path.exists(alt_path):
-            st.image(alt_path, caption=username.capitalize(), width=100)
 
     # --- Upload buyer Excel file (Only Admin can replace it) ---
     if st.session_state['role'] == 'Admin':
@@ -470,21 +503,26 @@ def sales_page(admin_view=False):
 def dispatch_page(admin_view=False):
     show_header()
 
-    username = st.session_state.get('username', 'User')
-    st.markdown(f"### 👋 Welcome back, **{username}**!")
-    st.info("You're on the 📦 Dispatch Panel.")
+    username = st.session_state.get('username', 'user')
+    username_lower = username.lower()
+    possible_extensions = ['jpg', 'png', 'jpeg']
 
-    # --- Show user photo (if exists) ---
-    image_path = f"assets/users/{username}.jpg"
-    alt_path = f"assets/users/{username}.jpg"
-    col1, col2 = st.columns([6, 1.5])
-    with col2:
-        if os.path.exists("assets/users/username.jpg"):
-            st.image("assets/users/amit.jpg", width=100)
-            st.image("assets/users/ajay.jpg", width=120)
-        elif os.path.exists(alt_path):
-            st.image(alt_path, caption=username.capitalize(), width=100)
+    found = False
+    for ext in possible_extensions:
+        image_path = f"assets/users/{username_lower}.{ext}"
+        if os.path.exists(image_path):
+            col1, col2 = st.columns([6, 1.5])
+            with col2:
+                st.image(image_path, caption=username.capitalize(), width=100)
+            found = True
+            break
 
+    if not found:
+        col1, col2 = st.columns([6, 1.5])
+        with col2:
+            st.info("No profile photo found.")
+    
+    # --- Your existing DB logic ---
     conn = sqlite3.connect('orders.db')
     conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
@@ -621,20 +659,20 @@ def dispatch_page(admin_view=False):
 def admin_page():
     show_header()
 
-    username = st.session_state.get('username', 'Admin')
-    st.markdown(f"### 👋 Welcome back, **{username}**!")
-    st.info("You're on the Admin Panel.")
+    username = st.session_state.get('username', 'user')
+    username_lower = username.lower()
+    possible_extensions = ['jpg', 'png', 'jpeg']
 
-    # --- Show profile photo (if exists) ---
-    image_path = f"assets/users/{username}.jpg"
-    alt_path = f"assets/users/{username}.jpg"
-    col1, col2 = st.columns([6, 1.5])
-    with col2:
+    found = False
+    for ext in possible_extensions:
+        image_path = f"assets/users/{username_lower}.{ext}"
         if os.path.exists(image_path):
-            st.image(image_path, caption=username.capitalize(), width=100)
-        elif os.path.exists(alt_path):
-            st.image(alt_path, caption=username.capitalize(), width=100)
-
+            col1, col2 = st.columns([6, 1.5])
+            with col2:
+                st.image(image_path, caption=username.capitalize(), width=100)
+            found = True
+            break
+    
     os.makedirs("data", exist_ok=True)
     db_path = os.path.join("data", "users.db")
     conn = sqlite3.connect(db_path)
