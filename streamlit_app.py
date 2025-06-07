@@ -176,7 +176,8 @@ def main_menu():
 
 def reports_page():
     show_header()
-
+    st.markdown("<h4>Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
+    
     st.markdown(f"### 👋 Welcome back, **{st.session_state.get('username', 'User')}**!")
     st.title("📊 Reports and Analytics")
     st.info("Track demand, dispatched summary, and performance insights.")
@@ -295,6 +296,7 @@ def reports_page():
 
 def sales_page(admin_view=False):
     show_header()
+    st.markdown("<h4>Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
 
     username = st.session_state.get('username', 'user')
     username_lower = username.lower()
@@ -503,7 +505,8 @@ def sales_page(admin_view=False):
 
 def dispatch_page(admin_view=False):
     show_header()
-
+    st.markdown("<h4>Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
+    
     username = st.session_state.get('username', 'user')
     username_lower = username.lower()
     possible_extensions = ['jpg', 'png', 'jpeg']
@@ -659,6 +662,7 @@ def dispatch_page(admin_view=False):
 
 def admin_page():
     show_header()
+    st.markdown("<h4>Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
 
     username = st.session_state.get('username', 'madhu.sharma')
     username_lower = username.lower()
