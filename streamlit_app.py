@@ -672,14 +672,13 @@ def admin_page():
                 st.image(image_path, caption=username.capitalize(), width=100)
             found = True
             break
-    
+
     os.makedirs("data", exist_ok=True)
     db_path = os.path.join("data", "users.db")
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
 
-    # --- Create users table only if not exists ---
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -725,9 +724,10 @@ def admin_page():
         role = user["role"]
         full_name = user["full_name"]
 
-        col1, col2, col3 = st.columns([3, 3, 4])
+        col1, col2, col3, col4 = st.columns([3, 3, 3, 1.5])
         with col1:
             st.markdown(f"**{username}**  \n_Full Name_: {full_name}  \n_Role_: {role}")
+
         with col2:
             updated_role = st.selectbox("Change Role", ["Admin", "Sales", "Dispatch"],
                                         index=["Admin", "Sales", "Dispatch"].index(role),
@@ -738,6 +738,7 @@ def admin_page():
                     conn.commit()
                     st.success(f"✅ Role updated for '{username}' to {updated_role}")
                     st.rerun()
+
         with col3:
             new_pw = st.text_input(f"New Password for {username}", type="password", key=f"new_pw_{user_id}")
             if new_pw:
@@ -745,7 +746,19 @@ def admin_page():
                     hashed_pw = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
                     c.execute("UPDATE users SET password_hash = ? WHERE user_id = ?", (hashed_pw, user_id))
                     conn.commit()
-                    st.success
+                    st.success(f"🔐 Password reset for '{username}'")
+                    st.rerun()
+
+        with col4:
+            if username.lower() == "admin":
+                st.caption("🔒")
+            else:
+                if st.button("🗑️", key=f"delete_user_{user_id}"):
+                    c.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+                    conn.commit()
+                    st.success(f"🗑️ Deleted user '{username}'")
+                    st.rerun()
+
     conn.close()
     return_menu_logout("admin")
 
