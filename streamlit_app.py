@@ -141,7 +141,7 @@ def login_page():
 # --- Main Menu ---
 def main_menu():
     show_header()
-    st.markdown("<h4>👋 Welcome to Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
+    st.markdown("<h4>Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
     st.markdown(f"### 👋 Welcome back, **{st.session_state['username']}**!")
     st.info(f"You are logged in as: `{st.session_state['role']}`")
 
