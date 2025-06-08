@@ -506,7 +506,7 @@ def sales_page(admin_view=False):
 def dispatch_page(admin_view=False):
     show_header()
     st.markdown("<h4>Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
-    
+
     username = st.session_state.get('username', 'user')
     username_lower = username.lower()
     possible_extensions = ['jpg', 'png', 'jpeg']
@@ -664,7 +664,7 @@ def admin_page():
     show_header()
     st.markdown("<h4>Shree Sai Salt - Order Management System</h4>", unsafe_allow_html=True)
 
-    username = st.session_state.get('username', 'madhu.sharma')
+    username = st.session_state.get('username', 'user')
     username_lower = username.lower()
     possible_extensions = ['jpg', 'png', 'jpeg']
 
